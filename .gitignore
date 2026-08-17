@@ -1,0 +1,10 @@
+# Secrets — never commit. Real keys live in the Netlify dashboard.
+.env
+.env.*
+!.env.example
+
+# Netlify CLI
+.netlify/
+
+node_modules/
+.DS_Store

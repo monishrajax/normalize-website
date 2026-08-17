@@ -1,0 +1,29 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Node 18+ gives the functions a built-in fetch(), so there are no npm
+# dependencies to install.
+[functions]
+  node_bundler = "esbuild"
+
+# The publish directory is the project root, so every file beside index.html is
+# a potential URL. These rules make sure the secret-bearing ones can never be
+# fetched, whatever ends up in the deploy.
+[[redirects]]
+  from = "/.env"
+  to = "/index.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.env/*"
+  to = "/index.html"
+  status = 404
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
