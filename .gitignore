@@ -1,10 +1,17 @@
-# Secrets — never commit. Real keys live in the Netlify dashboard.
+# Secrets — never commit. Real keys belong in your host's env var settings.
 .env
 .env.*
 !.env.example
-
-# Netlify CLI
-.netlify/
+**/.env
+!**/.env.example
 
 node_modules/
+dist/
+build/
+
+# Netlify CLI leftovers from the previous stack
+.netlify/
+
 .DS_Store
+*.log
+npm-debug.log*

@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Declaring them in @theme is what makes Tailwind generate the
+   matching utilities — bg-cream, text-ink, border-line, font-mono and so on —
+   so the palette has one definition rather than a CSS variable set and a
+   Tailwind config that can drift apart.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-cream: #f4ede0;
+  --color-cream-dark: #e9dfcb;
+  --color-ink: #151210;
+  --color-brown: #4a2c22;
+  --color-line: #ddd2ba;
+  --color-muted: #7a7166;
+  --color-white-warm: #fffdf9;
+
+  --color-gold-dark: #8a6a1c;
+  --color-gold: #d4af37;
+  --color-gold-light: #f6e6a8;
+
+  /* ONE VOICE: the site is set in the typewriter throughout. Two exceptions,
+     kept on their own faces because they are identity rather than copy — the
+     NORMALIZE wordmark and the coin's branch labels. */
+  --font-mono: "Courier Prime", "Courier New", Courier, monospace;
+  --font-sans: "Courier Prime", "Courier New", Courier, monospace;
+  --font-brand: "Archivo Expanded", "Jost", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-luxe: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-reveal: cubic-bezier(0.25, 1, 0.5, 1);
+
+  --container-site: 1320px;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--color-gold); color: var(--color-ink); }
+  :focus-visible { outline: 1px solid var(--color-gold-dark); outline-offset: 3px; }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: var(--color-cream); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line); border-radius: 9px;
+    border: 2px solid var(--color-cream);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-gold-dark); }
+
+  img { display: block; max-width: 100%; }
+  button { font-family: inherit; cursor: pointer; }
+}
+
+/* ---------------------------------------------------------------------------
+   The bespoke layer. Everything below is here because Tailwind utilities
+   genuinely cannot express it — 3D transforms with backface culling, animated
+   gradient text clipping, keyframes. Layout, spacing, colour and type all stay
+   in Tailwind classes on the components; this file never grows for those.
+--------------------------------------------------------------------------- */
+@layer components {
+  /* ---------- Metallic text ---------- */
+  .metallic-text {
+    background: linear-gradient(
+      100deg,
+      var(--color-gold-dark) 0%, var(--color-gold) 22%,
+      var(--color-gold-light) 45%, var(--color-gold) 68%,
+      var(--color-gold-dark) 100%
+    );
+    background-size: 240% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shine 7s linear infinite;
+  }
+
+  /* ---------- Spinning coin (pre-rendered gold faces) ----------
+     The faces are now real .webp files in /public/assets rather than the two
+     ~700KB base64 blobs that used to sit inside the stylesheet. */
+  .coin-spin { position: relative; display: inline-block; perspective: 600px; flex: none; }
+  .coin-spin .coin-inner {
+    display: block; position: relative; width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    animation: coin-rotate 7s linear infinite;
+  }
+  .coin-face {
+    position: absolute; inset: 0; border-radius: 50%;
+    background-size: contain; background-repeat: no-repeat; background-position: center;
+    -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  }
+  .coin-front { background-image: url("/assets/coin-front.webp"); }
+  .coin-back  { background-image: url("/assets/coin-back.webp"); transform: rotateY(180deg); }
+
+  /* Drag-to-spin: the script drives rotation, so the idle animation is off. */
+  .coin-interactive { cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  .coin-interactive .coin-inner { animation: none; }
+  .coin-interactive:active { cursor: grabbing; }
+
+  .coin-sm { width: 50px; height: 50px; }
+  .coin-md { width: 56px; height: 56px; }
+  .coin-lg { width: 168px; height: 168px; }
+}
+
+@keyframes shine { to { background-position: -240% 0; } }
+@keyframes coin-rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .coin-spin .coin-inner,
+  .metallic-text { animation: none; }
+  html { scroll-behavior: auto; }
+}

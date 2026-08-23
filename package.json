@@ -1,0 +1,17 @@
+{
+  "name": "normalize",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Normalize storefront \u2014 React + Tailwind client, Express + MongoDB API.",
+  "scripts": {
+    "install:all": "npm --prefix client install && npm --prefix server install",
+    "dev": "npm run dev --prefix server & npm run dev --prefix client",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "seed": "npm run seed --prefix server",
+    "test": "npm test --prefix server",
+    "build": "npm run build --prefix client",
+    "start": "NODE_ENV=production npm start --prefix server",
+    "dev:memory": "npm run dev:memory --prefix server & npm run dev --prefix client"
+  }
+}

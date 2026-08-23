@@ -1,0 +1,344 @@
+[
+  {
+    "slug": "classic-polo",
+    "name": "Classic Polo",
+    "category": "apparel",
+    "price": 3499,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "image": "https://images.unsplash.com/photo-1625910513399-c9fcba54338c?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "Crafted from premium cotton with a tailored silhouette. Designed for everyday elegance, durability and comfort.",
+    "details": {
+      "material": "<p>Cut from 220&nbsp;GSM GOTS-certified organic cotton piqué, grown without synthetic pesticides and dyed with low-impact, OEKO-TEX&nbsp;certified pigments.</p><p>The open-knit weave breathes in heat and holds its shape wash after wash — a polo built for a decade, not a season.</p>",
+      "design": "<p>A tailored silhouette with a clean, ribless placket and genuine mother-of-pearl buttons. The collar is double-stitched to stand naturally without fusing.</p><p>Side vents and a slightly dropped back hem keep it polished untucked — from morning meetings to evening trains.</p>",
+      "care": "<p>Machine wash cold, inside out, with like colours. Lay flat to dry to preserve the collar's structure.</p><p>Warm iron if needed; avoid bleach and tumble drying to keep the piqué's texture crisp.</p>"
+    },
+    "sku": "NRM-AP-001",
+    "weightKg": 0.45,
+    "dims": {
+      "length": 32,
+      "breadth": 8,
+      "height": 26
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 0
+  },
+  {
+    "slug": "tailored-shirt",
+    "name": "Tailored Shirt",
+    "category": "apparel",
+    "price": 4299,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "image": "https://images.unsplash.com/photo-1761727074964-5d352d9c3dcf?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "A structured shirt in fine cotton poplin, finished with mother-of-pearl buttons.",
+    "details": {
+      "material": "<p>Fine organic cotton poplin, spun from extra-long staple fibres for a smooth, cool hand and a soft natural sheen.</p><p>Traceable from farm to mill, with every dye bath meeting strict wastewater standards.</p>",
+      "design": "<p>A structured semi-cutaway collar, single-needle stitching at 18 stitches per inch, and a gusseted hem — the quiet signatures of proper shirtmaking.</p><p>Cut close through the shoulder with ease through the body, so it moves with you rather than against you.</p>",
+      "care": "<p>Gentle machine wash at 30°C and hang to dry while still damp — most creases fall out on the hanger.</p><p>A medium iron restores the crisp finish; dry clean before important occasions.</p>"
+    },
+    "sku": "NRM-AP-002",
+    "weightKg": 0.45,
+    "dims": {
+      "length": 32,
+      "breadth": 8,
+      "height": 26
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 1
+  },
+  {
+    "slug": "wool-overcoat",
+    "name": "Wool Overcoat",
+    "category": "apparel",
+    "price": 12999,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "image": "https://images.unsplash.com/photo-1637499948395-9b4bb51c76a2?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "A double-breasted overcoat in brushed wool, cut for a clean, considered silhouette.",
+    "details": {
+      "material": "<p>A brushed merino wool blend certified to the Responsible Wool Standard, lined in recycled cupro that glides over knitwear.</p><p>Naturally insulating, breathable and biodegradable — wool as it should be.</p>",
+      "design": "<p>Double-breasted with hand-finished lapels, real horn buttons and a gently suppressed waist for a clean, considered line.</p><p>Interior security pocket and a locker loop for daily practicality.</p>",
+      "care": "<p>Dry clean sparingly — once a season is enough. Between wears, brush with a garment brush and air overnight.</p><p>Store on a broad cedar hanger to hold the shoulder line and deter moths.</p>"
+    },
+    "sku": "NRM-AP-003",
+    "weightKg": 0.45,
+    "dims": {
+      "length": 32,
+      "breadth": 8,
+      "height": 26
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 2
+  },
+  {
+    "slug": "silk-slip-dress",
+    "name": "Silk Slip Dress",
+    "category": "apparel",
+    "price": 7499,
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "image": "https://images.unsplash.com/photo-1750064159040-c37883f82014?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "Bias-cut silk dress with a fluid drape and minimal detailing.",
+    "details": {
+      "material": "<p>Bias-cut from Ahimsa \"peace\" silk, harvested without harming the silkworm, and finished with certified low-impact dyes.</p><p>The fabric's natural temperature regulation keeps it cool in summer and soft against the skin year-round.</p>",
+      "design": "<p>French seams throughout, a scooped back and fine adjustable straps — nothing that doesn't need to be there.</p><p>The bias cut lets the silk pour over the body and move with a fluid, unforced drape.</p>",
+      "care": "<p>Hand wash cold with a silk-specific detergent, or dry clean. Never wring; press water out in a towel.</p><p>Drip dry away from direct sun and iron cool on the reverse while slightly damp.</p>"
+    },
+    "sku": "NRM-AP-004",
+    "weightKg": 0.45,
+    "dims": {
+      "length": 32,
+      "breadth": 8,
+      "height": 26
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 3
+  },
+  {
+    "slug": "butterfly-tote",
+    "name": "Butterfly Tote",
+    "category": "bags",
+    "price": 799,
+    "sizes": [
+      "Dawn",
+      "Dusk"
+    ],
+    "image": "/assets/tote-dawn.webp",
+    "images": {
+      "Dawn": "/assets/tote-dawn.webp",
+      "Dusk": "/assets/tote-dusk.webp"
+    },
+    "desc": "Indigo jute under an all-over scatter of white butterflies. An open weave left honest, a print that sits into the grain, and a shape cut to carry a day's worth of things without ceremony.",
+    "details": {
+      "material": "<p>Natural jute in a coarse plain weave, piece-dyed indigo. Jute is a rain-fed bast fibre — fast-growing, fully biodegradable and one of the lowest-impact textiles in production.</p><p>The butterflies are printed in white across the whole body, front and back, in a loose repeat that runs right to the seams. Because the ink meets an open weave rather than a flat cloth, it sits into the grain and softens at the edges &mdash; textured up close, graphic from across a room.</p>",
+      "design": "<p>A clean rectangular body with a wide, unfastened opening and a flat base that lets the bag stand on its own. The top edge is turned and bound for structure; side seams are reinforced where the handles take load.</p><p>No closure, no hardware, nothing dangling — the print is the only ornament. Long woven handles are set inside the top hem and box-stitched at the stress points, cut with a drop for shoulder carry over a coat.</p>",
+      "care": "<p>Spot clean with a barely damp cloth and mild soap; do not machine wash or soak, as jute weakens when saturated. Dry flat, away from direct sun.</p><p>Store stuffed so the base keeps its shape. A few stray fibres at the seams are natural to jute and can simply be trimmed.</p>"
+    },
+    "sku": "NRM-BG-005",
+    "weightKg": 0.35,
+    "dims": {
+      "length": 40,
+      "breadth": 12,
+      "height": 35
+    },
+    "isSellable": true,
+    "isFeatured": true,
+    "sortOrder": 4
+  },
+  {
+    "slug": "structured-satchel",
+    "name": "Structured Satchel",
+    "category": "bags",
+    "price": 8499,
+    "sizes": [
+      "One Size"
+    ],
+    "image": "https://images.unsplash.com/photo-1510783891783-80cda42ebfd2?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "A boxy top-handle satchel in vegetable-tanned leather with brass hardware.",
+    "details": {
+      "material": "<p>Vegetable-tanned cowhide with a suede-lined flap underside, tanned slowly for structure that softens without slouching.</p><p>All offcuts from our satchel production are returned to the tannery for regrind — nothing is wasted.</p>",
+      "design": "<p>A boxy East-West profile with saddle-stitched stress points — each stitch locked independently, so a worn thread never runs.</p><p>Solid brass roller buckle and a reinforced base that stands on its own.</p>",
+      "care": "<p>Wipe with a barely damp cloth and condition twice a year. Avoid overfilling to keep the silhouette sharp.</p><p>Rest it in its dust bag between heavy use.</p>"
+    },
+    "sku": "NRM-BG-006",
+    "weightKg": 0.35,
+    "dims": {
+      "length": 40,
+      "breadth": 12,
+      "height": 35
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 5
+  },
+  {
+    "slug": "weekender-duffel",
+    "name": "Weekender Duffel",
+    "category": "bags",
+    "price": 9999,
+    "sizes": [
+      "One Size"
+    ],
+    "image": "https://images.unsplash.com/photo-1647540945262-7da3bd1a3d96?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "Canvas and leather duffel built for short trips, with a detachable shoulder strap.",
+    "details": {
+      "material": "<p>18&nbsp;oz organic cotton canvas with full-grain leather trim and webbing woven from a high-grade jute blend — durable, breathable and fully biodegradable.</p><p>The canvas is loomed dense enough to shrug off drizzle without any plastic coating.</p>",
+      "design": "<p>Built for the two-night trip: a detachable, adjustable shoulder strap, riveted stress points and solid brass feet that keep the base off the floor.</p><p>Wide-mouth opening so you can actually see what you packed.</p>",
+      "care": "<p>Spot clean the canvas with mild soap; condition the leather trim as you would a bag.</p><p>Air-dry fully before storing, and stuff lightly to hold the shape.</p>"
+    },
+    "sku": "NRM-BG-007",
+    "weightKg": 0.35,
+    "dims": {
+      "length": 40,
+      "breadth": 12,
+      "height": 35
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 6
+  },
+  {
+    "slug": "leather-belt",
+    "name": "Leather Belt",
+    "category": "accessories",
+    "price": 2499,
+    "sizes": [
+      "S",
+      "M",
+      "L"
+    ],
+    "image": "https://images.unsplash.com/photo-1707400131124-a688ed508a95?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "A 3cm leather belt with a solid brass buckle, hand-finished edges.",
+    "details": {
+      "material": "<p>A single strap of full-grain, vegetable-tanned leather — no splits, no bonded layers — with a solid brass buckle cast, not stamped.</p><p>The tannage uses mimosa and quebracho bark, so the strap ages to a warm honey tone.</p>",
+      "design": "<p>Three centimetres wide with hand-finished, wax-polished edges and five precisely spaced sizing holes.</p><p>Designed to sit flat against the waistband — dress trousers or raw denim alike.</p>",
+      "care": "<p>Condition lightly when the leather feels dry; buff with a soft cloth to restore lustre.</p><p>Roll, don't fold, when travelling.</p>"
+    },
+    "sku": "NRM-AC-008",
+    "weightKg": 0.25,
+    "dims": {
+      "length": 24,
+      "breadth": 8,
+      "height": 12
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 7
+  },
+  {
+    "slug": "silk-pocket-square",
+    "name": "Silk Pocket Square",
+    "category": "accessories",
+    "price": 1299,
+    "sizes": [
+      "One Size"
+    ],
+    "image": "https://images.unsplash.com/photo-1769868800959-533a3f907d60?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "Hand-rolled hem silk square, printed in small batches.",
+    "details": {
+      "material": "<p>Pure mulberry silk twill, screen-printed in small batches and finished with a hand-rolled hem — an hour of handwork per square.</p><p>Printed with water-based inks in a certified low-impact studio.</p>",
+      "design": "<p>A 32&nbsp;cm square, sized to fold cleanly into a presidential, puff or point — and to stay put once placed.</p><p>The twill weave gives the print depth and a soft, tactile lustre.</p>",
+      "care": "<p>Dry clean only. Store flat or loosely rolled to protect the hand-rolled edge.</p><p>A cool iron on the reverse revives the fold lines.</p>"
+    },
+    "sku": "NRM-AC-009",
+    "weightKg": 0.25,
+    "dims": {
+      "length": 24,
+      "breadth": 8,
+      "height": 12
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 8
+  },
+  {
+    "slug": "aviator-sunglasses",
+    "name": "Aviator Sunglasses",
+    "category": "accessories",
+    "price": 3999,
+    "sizes": [
+      "One Size"
+    ],
+    "image": "https://images.unsplash.com/photo-1600076280106-22cb8bd62b22?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "Acetate aviators with polarised lenses and a matte finish.",
+    "details": {
+      "material": "<p>Frames milled from bio-acetate — a plant-based acetate derived from cotton and wood pulp — fitted with polarised CR-39 lenses offering full UV400 protection.</p><p>Every pair is tumbled for three days in wood chips for a deep, glass-like polish.</p>",
+      "design": "<p>A classic teardrop profile balanced with five-barrel hinges and hand-set pins — engineering where it matters most.</p><p>The bridge is sculpted to sit lightly without pinching through long afternoons.</p>",
+      "care": "<p>Clean with the supplied microfibre cloth; never dry-wipe grit off the lenses.</p><p>Store in the case, and keep away from car dashboards and other high-heat spots that can warp acetate.</p>"
+    },
+    "sku": "NRM-AC-010",
+    "weightKg": 0.25,
+    "dims": {
+      "length": 24,
+      "breadth": 8,
+      "height": 12
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 9
+  },
+  {
+    "slug": "six-panel-cap",
+    "name": "Six-Panel Cap",
+    "category": "caps",
+    "price": 1499,
+    "sizes": [
+      "One Size"
+    ],
+    "image": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "Unstructured six-panel cap in washed cotton twill, with a soft crown and a brass slider.",
+    "details": {
+      "material": "<p>Washed cotton twill with a soft, unstructured crown and a cotton sweatband — the kind of cap that gives with wear instead of fighting it.</p><p>Brass slider closure; no plastic snapback.</p>",
+      "design": "<p>A six-panel build with a mid-height crown and a gently pre-curved brim, cut to sit low without swallowing the face.</p><p>Tonal stitching and no front logo — the shape does the work.</p>",
+      "care": "<p>Hand wash cool and reshape while damp; never put a cap through a machine cycle.</p><p>Air dry over something round so the crown keeps its form.</p>"
+    },
+    "sku": "NRM-CP-011",
+    "weightKg": 0.2,
+    "dims": {
+      "length": 24,
+      "breadth": 12,
+      "height": 14
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 10
+  },
+  {
+    "slug": "corduroy-cap",
+    "name": "Corduroy Cap",
+    "category": "caps",
+    "price": 1699,
+    "sizes": [
+      "One Size"
+    ],
+    "image": "https://images.unsplash.com/photo-1521369909029-2afed882baee?w=800&h=1000&fit=crop&auto=format&q=80",
+    "images": {},
+    "desc": "Fine-wale corduroy cap with a curved brim and a cotton sweatband.",
+    "details": {
+      "material": "<p>Fine-wale cotton corduroy with a brushed hand, lined with a cotton sweatband that sits flat against the forehead.</p><p>The nap catches light differently through the day — the colour is never quite flat.</p>",
+      "design": "<p>A softly structured crown on a curved brim, with a covered button at the crown and a metal slider at the back.</p><p>Cut a touch deeper than a summer cap so it works over a winter haircut.</p>",
+      "care": "<p>Spot clean and brush the nap back into line with a soft brush.</p><p>Keep it out of the wash — corduroy flattens permanently once it is soaked and spun.</p>"
+    },
+    "sku": "NRM-CP-012",
+    "weightKg": 0.2,
+    "dims": {
+      "length": 24,
+      "breadth": 12,
+      "height": 14
+    },
+    "isSellable": false,
+    "isFeatured": false,
+    "sortOrder": 11
+  }
+]
