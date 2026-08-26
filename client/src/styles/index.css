@@ -35,7 +35,10 @@
 }
 
 @layer base {
-  html { scroll-behavior: smooth; }
+  /* NOTE: no `scroll-behavior: smooth` here on purpose. It fights GSAP
+     ScrollTrigger's pinning — the pin and the browser's own smooth scroll end
+     up competing for the scroll position and the launch section jumps. Smooth
+     scrolling is done per-link with scrollIntoView instead. */
   body {
     background: var(--color-cream);
     color: var(--color-ink);
@@ -113,5 +116,4 @@
 @media (prefers-reduced-motion: reduce) {
   .coin-spin .coin-inner,
   .metallic-text { animation: none; }
-  html { scroll-behavior: auto; }
 }

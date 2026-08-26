@@ -25,13 +25,16 @@ export default function Hero() {
         intention rather than noise.
       </p>
 
-      <a
-        href="#spotlight"
+      <button
+        type="button"
+        onClick={() =>
+          document.getElementById("spotlight")?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
         className="border border-ink px-9 py-3.5 text-[11px] tracking-[0.18em] text-ink uppercase
                    transition-colors duration-400 ease-(--ease-out) hover:bg-ink hover:text-cream"
       >
         Shop the Collection
-      </a>
+      </button>
     </section>
   );
 }

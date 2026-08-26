@@ -78,12 +78,18 @@ export default function LaunchCanvas({ onNavigate }) {
   }, []);
 
   return (
+    /* The section deliberately has NO fixed height and no overflow clipping.
+       ScrollTrigger pins the stage by wrapping it in a pin-spacer taller than
+       one viewport (viewport + scroll distance); an `h-screen overflow-hidden`
+       section clips that spacer, and the pin then has nowhere to travel. The
+       stage carries the viewport height, and the section takes its height from
+       the spacer. */
     <section
       ref={sectionRef}
       aria-label="The Normalize coin, up close"
-      className="relative h-screen overflow-hidden bg-ink"
+      className="relative bg-ink"
     >
-      <div ref={stageRef} className="relative h-screen w-full">
+      <div ref={stageRef} className="relative h-screen w-full overflow-hidden">
         {/* Metallic gradient shared by every branch. */}
         <svg width="0" height="0" aria-hidden="true" className="absolute">
           <defs>

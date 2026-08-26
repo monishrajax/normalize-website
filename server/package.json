@@ -7,8 +7,8 @@
     "dev": "node --watch --env-file=.env src/index.js",
     "start": "node src/index.js",
     "seed": "node --env-file=.env src/seed.js",
-    "test": "node test/e2e.mjs",
-    "dev:memory": "node test/dev-memory-db.mjs"
+    "test": "node --env-file-if-exists=.env test/e2e.mjs",
+    "dev:memory": "node --env-file-if-exists=.env test/dev-memory-db.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",

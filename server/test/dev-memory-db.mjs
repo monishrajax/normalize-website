@@ -21,8 +21,9 @@ const env = {
   MONGODB_URI: mongo.getUri("normalize"),
   PORT: process.env.PORT || "5050",
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || "http://localhost:5173",
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "rzp_test_TOQCGFLxfbZZlX",
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "Gc9x2rpfNve0t9ndXgapxVKM",
+  // Read from server/.env — never hardcoded, so this file is safe to commit.
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
   SHIPROCKET_CREATE_ON_PAYMENT: process.env.SHIPROCKET_CREATE_ON_PAYMENT || "false",
   SHIPPING_FEE: process.env.SHIPPING_FEE || "199",
   FREE_SHIPPING_THRESHOLD: process.env.FREE_SHIPPING_THRESHOLD || "1499",

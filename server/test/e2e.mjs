@@ -4,8 +4,9 @@
    Run with:  npm test          (from server/)
 
    It needs no local MongoDB and moves no real money — test-mode keys only.
-   The Razorpay key id/secret below are the shared test pair; override them with
-   your own via the environment if you prefer. */
+
+   Credentials come from server/.env and are never written into this file: a
+   key committed to the repo is a key published to everyone who can read it. */
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
@@ -15,8 +16,23 @@ import { fileURLToPath } from "node:url";
 
 // Resolve the server package from this file, so the test runs from anywhere.
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const WEBHOOK_SECRET = "test_webhook_secret_123";
-const KEY_SECRET = "Gc9x2rpfNve0t9ndXgapxVKM";
+const WEBHOOK_SECRET = "test_webhook_secret_for_this_run_only";
+const KEY_ID = process.env.RAZORPAY_KEY_ID;
+const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+
+if (!KEY_ID || !KEY_SECRET) {
+  console.error(
+    "\nRAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are not set.\n" +
+    "Copy server/.env.example to server/.env and fill in your TEST keys\n" +
+    "(rzp_test_*), then run this again.\n"
+  );
+  process.exit(1);
+}
+if (!KEY_ID.startsWith("rzp_test_")) {
+  // A live key here would create real orders against real money.
+  console.error("\nRefusing to run: RAZORPAY_KEY_ID is not a test key (rzp_test_*).\n");
+  process.exit(1);
+}
 
 let failures = 0;
 const check = (label, ok, detail) => {
@@ -34,7 +50,7 @@ const env = {
   PORT: "5099",
   NODE_ENV: "development",
   CLIENT_ORIGIN: "http://localhost:5173",
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "rzp_test_TOQCGFLxfbZZlX",
+  RAZORPAY_KEY_ID: KEY_ID,
   RAZORPAY_KEY_SECRET: KEY_SECRET,
   RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET,
   SHIPROCKET_CREATE_ON_PAYMENT: "false",
