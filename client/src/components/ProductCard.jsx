@@ -1,13 +1,13 @@
 import { money } from "../lib/api";
 import { useCart } from "../context/CartContext";
 
+/* .reveal is picked up by useReveal on the grid — cards stagger up into
+   view rather than all appearing at once. */
 export default function ProductCard({ product, onSelect }) {
   const { wishlist, toggleWishlist } = useCart();
   const wished = wishlist.includes(product.id);
 
   return (
-    {/* .reveal is picked up by useReveal on the grid — cards stagger up
-        into view rather than all appearing at once. */}
     <article className="reveal group relative">
       <button
         onClick={() => onSelect(product)}
