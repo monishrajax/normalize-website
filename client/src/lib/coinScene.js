@@ -26,7 +26,7 @@ const FACE_BACK = "/assets/coin-back.webp";
 /* The coin plus a little air, in world units. Framing is solved from this so
    the whole coin is visible on any aspect ratio from the first frame — there
    is no zoom-in journey to hide a bad opening shot. */
-const FRAME_EXTENT = 2.75;
+const FRAME_EXTENT = 3.6;
 
 export function createCoinScene(container, { isSmall = false } = {}) {
   let renderer;
@@ -97,11 +97,13 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     const arcCentre = 0.75 * W;
     const arcHalf = (115 / 360) * W;
     const arc = x.createLinearGradient(arcCentre - arcHalf, 0, arcCentre + arcHalf, 0);
-    arc.addColorStop(0, "rgba(120, 84, 26, 0)");
-    arc.addColorStop(0.18, "rgba(196, 146, 56, 0.55)");
-    arc.addColorStop(0.5, "rgba(255, 226, 158, 0.92)");
-    arc.addColorStop(0.82, "rgba(196, 146, 56, 0.55)");
-    arc.addColorStop(1, "rgba(120, 84, 26, 0)");
+    arc.addColorStop(0, "rgba(90, 62, 18, 0)");
+    arc.addColorStop(0.30, "rgba(150, 108, 38, 0.20)");
+    arc.addColorStop(0.46, "rgba(214, 166, 74, 0.52)");
+    arc.addColorStop(0.5, "rgba(255, 231, 170, 0.85)");
+    arc.addColorStop(0.54, "rgba(214, 166, 74, 0.52)");
+    arc.addColorStop(0.70, "rgba(150, 108, 38, 0.20)");
+    arc.addColorStop(1, "rgba(90, 62, 18, 0)");
     x.save();
     x.globalCompositeOperation = "screen";
     x.fillStyle = arc;
@@ -122,10 +124,10 @@ export function createCoinScene(container, { isSmall = false } = {}) {
       x.fillRect(px, py, pw, ph);
       x.restore();
     };
-    box(W * 0.60, H * 0.06, W * 0.30, H * 0.20, "#ffffff", 46);   // key, upper
-    box(W * 0.10, H * 0.20, W * 0.16, H * 0.34, "#fff6e4", 54);   // left rake
-    box(W * 0.40, H * 0.30, W * 0.10, H * 0.24, "#ffffff", 40);   // narrow kicker
-    box(W * 0.72, H * 0.62, W * 0.22, H * 0.14, "#ffe4b0", 62);   // warm floor bounce
+    box(W * 0.62, H * 0.05, W * 0.17, H * 0.17, "#ffffff", 34);   // key, upper
+    box(W * 0.09, H * 0.22, W * 0.09, H * 0.32, "#fff6e4", 40);   // left rake
+    box(W * 0.40, H * 0.28, W * 0.05, H * 0.26, "#ffffff", 26);   // narrow kicker
+    box(W * 0.86, H * 0.60, W * 0.13, H * 0.11, "#ffe4b0", 52);   // warm floor bounce
 
     const t = new THREE.CanvasTexture(c);
     t.mapping = THREE.EquirectangularReflectionMapping;
@@ -226,7 +228,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
         const x = c.getContext("2d");
         x.imageSmoothingQuality = "high";
         const ground = x.createRadialGradient(FACE / 2, FACE * 0.42, FACE * 0.06, FACE / 2, FACE / 2, FACE * 0.62);
-        ground.addColorStop(0, "#f2e3b2"); ground.addColorStop(0.55, "#d8ba72"); ground.addColorStop(1, "#b78f3c");
+        ground.addColorStop(0, "#d9c489"); ground.addColorStop(0.55, "#b1904f"); ground.addColorStop(1, "#8a6a2b");
         x.fillStyle = ground; x.fillRect(0, 0, FACE, FACE);
         // A sub-pixel blur while upscaling acts as a high-sample resample, so
         // the artwork's staircase edges become smooth at macro magnification.
@@ -259,8 +261,8 @@ export function createCoinScene(container, { isSmall = false } = {}) {
   scene.add(coin);
 
   /* Base env intensities, before the rotation curve is applied each frame. */
-  const EDGE_ENV_BASE = 1.6;
-  const FACE_ENV_BASE = 2.1;
+  const EDGE_ENV_BASE = 1.15;
+  const FACE_ENV_BASE = 1.0;
 
   const edgeMaterial = new THREE.MeshPhysicalMaterial({
     color: GOLD,
@@ -435,6 +437,9 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     setPointer,
     addSpin,
     resize,
+    /* The coin's on-screen diameter as a fraction of the stage's tighter axis.
+       LaunchCanvas needs it to sit the branch anchors on the rim. */
+    coinDiameterRatio: 2 / FRAME_EXTENT,
     dispose() {
       running = false;
       cancelAnimationFrame(frame);

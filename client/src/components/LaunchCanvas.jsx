@@ -40,9 +40,14 @@ export default function LaunchCanvas({ onNavigate }) {
     el.style.setProperty("--dash", `${len}`);
   }, []);
 
-  /* Mobile: the branches become an outward radial halo around a smaller coin,
-     never stacked over it. The radius is measured rather than guessed because
-     the coin's on-screen size is solved from the stage's own aspect ratio. */
+  /* Branch anchors sit on the coin's RIM, measured, so a branch always grows
+     outward onto dark ground and is never stacked over the artwork. Both
+     breakpoints are radial for that reason; what changes below 768px is the
+     reach — a tighter halo around a smaller coin.
+
+     COIN_RATIO mirrors `coinDiameterRatio` in lib/coinScene.js: the scene
+     frames a 2-unit coin inside FRAME_EXTENT units, so the coin's diameter is
+     that fraction of the stage's tighter axis. */
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
     const onChange = () => setIsSmall(mq.matches);
@@ -51,11 +56,15 @@ export default function LaunchCanvas({ onNavigate }) {
     const measure = () => {
       const stage = stageRef.current;
       if (!stage) return;
+      const COIN_RATIO = 2 / 3.6;
+      const small = mq.matches;
       const min = Math.min(stage.clientWidth, stage.clientHeight);
-      // The scene frames a 2-unit coin inside 2.75 units, so the coin's
-      // diameter is 2/2.75 of the tighter viewport axis.
-      const coinRadius = (min * (2 / 2.75)) / 2;
-      setHalo({ r: coinRadius * 0.66, out: Math.min(120, coinRadius * 0.72) });
+      const coinRadius = (min * COIN_RATIO) / 2;
+      setHalo({
+        // Just inside the rim, so the branch reads as growing out of the metal.
+        r: coinRadius * 0.94,
+        out: small ? Math.min(104, coinRadius * 0.62) : Math.min(190, coinRadius * 0.78),
+      });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -63,7 +72,7 @@ export default function LaunchCanvas({ onNavigate }) {
       mq.removeEventListener("change", onChange);
       window.removeEventListener("resize", measure);
     };
-  }, []);
+  }, [isSmall]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -194,26 +203,27 @@ export default function LaunchCanvas({ onNavigate }) {
     return () => { cancelled = true; cleanup(); };
   }, []);
 
-  /* Desktop uses the hand-placed anchors; mobile derives everything from the
-     branch's bearing so the halo stays outside the coin at any size. */
+  /* Each branch keeps its own hand-set bearing — they are deliberately not
+     evenly spaced — but the distance along it is measured from the coin. */
   const placement = (h) => {
-    if (!isSmall) {
-      return {
-        style: { left: h.x, top: h.y },
-        nx: h.nx,
-        ny: h.ny,
-      };
-    }
     const rad = (h.angle * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
     return {
       style: {
         left: "50%",
         top: "50%",
-        marginLeft: `${Math.cos(rad) * halo.r}px`,
-        marginTop: `${Math.sin(rad) * halo.r}px`,
+        marginLeft: `${cos * halo.r}px`,
+        marginTop: `${sin * halo.r}px`,
       },
-      nx: `${Math.cos(rad) * halo.out}px`,
-      ny: `${Math.sin(rad) * halo.out}px`,
+      nx: `${cos * halo.out}px`,
+      ny: `${sin * halo.out}px`,
+      // The silhouettes are drawn left-to-right in their own box; rotating to
+      // the bearing is what makes them actually grow toward the label.
+      angle: h.angle,
+      // Labels on the left half are pushed further so they end, not begin, at
+      // the branch tip.
+      flip: cos < 0,
     };
   };
 
@@ -272,14 +282,20 @@ export default function LaunchCanvas({ onNavigate }) {
                 <span className="block h-2 w-2 rounded-full bg-gold-light shadow-[0_0_12px_3px_rgba(214,175,55,0.55)]" />
 
                 {/* The branch, drawing itself toward the label */}
+                {/* The silhouette is pinned by its LEFT edge to the anchor and
+                    rotated about that point, so the branch grows out of the
+                    coin's rim rather than floating near it. Its width is the
+                    exact distance to the label, so tip and label meet. */}
                 <svg
                   viewBox="0 0 200 120"
                   preserveAspectRatio="none"
                   aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-1/2 h-[120px] w-[200px]
-                             -translate-y-1/2 opacity-90"
+                  className="pointer-events-none absolute top-1/2 left-1/2 opacity-90"
                   style={{
-                    transform: `translate(calc(-50% + ${place.nx} / 2), calc(-50% + ${place.ny} / 2))`,
+                    width: `${halo.out}px`,
+                    height: "120px",
+                    transformOrigin: "0 50%",
+                    transform: `translateY(-50%) rotate(${place.angle}deg)`,
                   }}
                 >
                   <g stroke="url(#branch-metal)" fill="none" strokeLinecap="round">
@@ -301,7 +317,11 @@ export default function LaunchCanvas({ onNavigate }) {
                 <span
                   className="branch-label absolute text-[11px] whitespace-nowrap text-gold-light
                              uppercase transition-colors group-hover:text-white-warm"
-                  style={{ transform: `translate(${place.nx}, ${place.ny})` }}
+                  style={{
+                    transform:
+                      `translate(${place.nx}, ${place.ny}) ` +
+                      `translateX(${place.flip ? "-100%" : "0"})`,
+                  }}
                 >
                   {h.label}
                   {h.key === "cart" && (

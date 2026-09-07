@@ -9,7 +9,7 @@
 export const HOTSPOTS = [
   {
     "key": "launch",
-    "angle": -128,
+    "angle": -132,
     "label": "The Launch",
     "target": "spotlight",
     "x": "36%",
@@ -125,7 +125,7 @@ export const HOTSPOTS = [
   },
   {
     "key": "story",
-    "angle": 118,
+    "angle": 152,
     "label": "Our story",
     "target": "story",
     "x": "33%",
