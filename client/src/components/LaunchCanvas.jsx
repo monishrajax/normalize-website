@@ -303,7 +303,11 @@ export default function LaunchCanvas({ onNavigate }) {
           )}
         </div>
 
-        <div ref={branchLayerRef} className="absolute inset-0">
+        {/* pointer-events-none is load-bearing: this layer covers the whole
+            stage and sits above the canvas, so without it every pointerdown
+            meant for the coin is swallowed here and the coin cannot be
+            dragged at all. The branches opt back in individually. */}
+        <div ref={branchLayerRef} className="pointer-events-none absolute inset-0">
           {/* Metallic gradient shared by every branch. */}
           <svg width="0" height="0" aria-hidden="true" className="absolute">
             <defs>
@@ -327,8 +331,8 @@ export default function LaunchCanvas({ onNavigate }) {
                    has to carry it too. */
                 aria-label={h.key === "cart" ? `${h.label} (${badge})` : h.label}
                 style={place.style}
-                className={`group absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center
-                            transition-opacity duration-700 ease-(--ease-out)
+                className={`group pointer-events-auto absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2
+                            place-items-center transition-opacity duration-700 ease-(--ease-out)
                             ${grown ? "branch-grown opacity-100" : "opacity-0"}`}
               >
                 {/* Anchor node on the coin's surface */}

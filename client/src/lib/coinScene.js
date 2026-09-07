@@ -42,7 +42,20 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
   }
 
   const canvas = renderer.domElement;
-  canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;";
+  /* touch-action: pan-y, NOT none. The coin flips on a horizontal drag, so the
+     browser keeps vertical swipes for scrolling — with `none` the canvas covers
+     the whole pinned stage and a phone user cannot scroll past the launch
+     section at all. */
+  canvas.style.cssText =
+    "position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab;outline:none;";
+  /* The coin is a real control, so it takes a tab stop and answers the keyboard.
+     Without this it is unreachable for anyone not using a mouse. */
+  canvas.tabIndex = 0;
+  canvas.setAttribute("role", "button");
+  canvas.setAttribute(
+    "aria-label",
+    "The Normalize coin. Drag to turn it, or press the left and right arrow keys. Press Enter to flip it over."
+  );
   container.appendChild(canvas);
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -326,7 +339,15 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
      `flip` is the Y-axis angle and the only thing that turns the coin. `tiltX`
      is a small pointer-follow lean, kept off the Y axis so it can never be
      mistaken for the flip. Z is untouched, always, by anything.              */
-  const spin = { flip: 0, vel: 0, dragging: false, lastX: 0, lastT: 0, idle: 0.28 };
+  const spin = {
+    flip: 0, vel: 0, dragging: false, lastX: 0, lastT: 0, idle: 0.28,
+    // When set, the coin is easing to a specific angle (a tap or Enter turning
+    // it to its other face) and neither idle drift nor momentum applies.
+    target: null,
+    // Distinguishing a tap from a drag needs the distance travelled, not just
+    // the final position — a slow drag that returns to its origin is not a tap.
+    downX: 0, downT: 0, travel: 0,
+  };
   const tilt = { x: 0, targetX: 0 };
   const sheen = { t: 0, lastUser: 0 };
 
@@ -337,12 +358,26 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
     sheen.lastUser = performance.now();
   }
 
+  /* A tap turns the coin to whichever face is not showing. Snapping to the
+     nearest multiple of PI from the current angle keeps it honest however many
+     times it has been spun. */
+  function flipOver() {
+    const half = Math.round(spin.flip / Math.PI);
+    spin.target = (half + 1) * Math.PI;
+    spin.vel = 0;
+    sheen.lastUser = performance.now();
+  }
+
   /* ---- Drag to flip, from the very first frame ---- */
   function onPointerDown(e) {
     spin.dragging = true;
     spin.lastX = e.clientX;
+    spin.downX = e.clientX;
     spin.lastT = performance.now();
+    spin.downT = spin.lastT;
+    spin.travel = 0;
     spin.vel = 0;
+    spin.target = null;          // a grab cancels an in-flight flip
     canvas.style.cursor = "grabbing";
     canvas.setPointerCapture?.(e.pointerId);
   }
@@ -351,6 +386,7 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
     const now = performance.now();
     const dx = e.clientX - spin.lastX;
     const dt = Math.max(8, now - spin.lastT);
+    spin.travel += Math.abs(dx);
     spin.flip += dx * 0.011;
     // Remember the throw so releasing mid-drag carries momentum.
     spin.vel = (dx * 0.011) / (dt / 1000);
@@ -363,8 +399,24 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
     spin.dragging = false;
     canvas.style.cursor = "grab";
     canvas.releasePointerCapture?.(e.pointerId);
+    // A press that went nowhere is a tap: show the other face.
+    if (spin.travel < 5 && performance.now() - spin.downT < 350) flipOver();
+  }
+
+  /* Keyboard: the arrows nudge it round, Enter/Space turns it over. */
+  function onKeyDown(e) {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      spin.target = null;
+      spin.vel += e.key === "ArrowRight" ? 2.4 : -2.4;
+      sheen.lastUser = performance.now();
+      e.preventDefault();
+    } else if (e.key === "Enter" || e.key === " ") {
+      flipOver();
+      e.preventDefault();
+    }
   }
   canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("keydown", onKeyDown);
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
   window.addEventListener("pointercancel", onPointerUp);
@@ -372,6 +424,7 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
   /* Scroll velocity feeds the flip, so the toss into the header carries real
      spin rather than a canned tumble. */
   function addSpin(v) {
+    if (spin.dragging || spin.target !== null) return;   // don't fight the user
     spin.vel += v;
     sheen.lastUser = performance.now();
   }
@@ -407,11 +460,22 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
       keyLight.position.set(Math.sin(sheen.t) * 2.2, 1.8, 2.4);
     }
 
-    if (!spin.dragging) {
+    if (spin.dragging) {
+      // The hand is on it; nothing else gets to move it.
+    } else if (spin.target !== null) {
+      // Easing to a chosen face. Exponential approach so it arrives without
+      // overshooting, then hands back to the idle drift.
+      const remaining = spin.target - spin.flip;
+      spin.flip += remaining * Math.min(1, dt * 7);
+      if (Math.abs(remaining) < 0.004) {
+        spin.flip = spin.target;
+        spin.target = null;
+      }
+    } else {
       // Thrown momentum decays; underneath it a slow idle flip keeps turning,
       // which is what shows off the lighting curve below without the visitor
       // having to touch anything.
-      spin.vel *= Math.pow(0.12, dt);
+      spin.vel *= Math.pow(0.25, dt);
       if (Math.abs(spin.vel) < 0.02) spin.vel = 0;
       spin.flip += (spin.vel + spin.idle) * dt;
     }
@@ -448,6 +512,7 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
       running = false;
       cancelAnimationFrame(frame);
       canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
