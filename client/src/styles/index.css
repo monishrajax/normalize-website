@@ -123,8 +123,12 @@
   .coin-front { background-image: url("/assets/coin-front.webp"); }
   .coin-back  { background-image: url("/assets/coin-back.webp"); transform: rotateY(180deg); }
 
-  /* Drag-to-spin: the script drives rotation, so the idle animation is off. */
-  .coin-interactive { cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  /* Drag-to-spin: the script drives rotation, so the idle animation is off.
+
+     touch-action is pan-y, NOT none. The coin turns on a horizontal drag, so
+     the browser keeps vertical swipes for scrolling — with `none`, a phone user
+     who happens to start a swipe on the hero coin cannot scroll the page. */
+  .coin-interactive { cursor: grab; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
   .coin-interactive .coin-inner { animation: none; }
   .coin-interactive:active { cursor: grabbing; }
 

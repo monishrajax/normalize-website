@@ -1,17 +1,23 @@
-/* Eyebrow, serif headline, one line of positioning, one gold button.
+import Coin from "./Coin";
+
+/* Coin, eyebrow, serif headline, one line of positioning, one gold button.
 
    The wordmark here is Cormorant Garamond 300 — the hero's is the serif cut,
    the header's is Archivo Expanded 700. Those two are the only places on the
    site not set in the typewriter.
 
-   No coin in this section: the coin's home is the launch canvas directly
-   above, and it docks into the header on the way past. */
+   The coin here is the CSS one, and it is interactive: drag to turn it, tap to
+   flip it. It deliberately teaches the same gestures as the WebGL coin on the
+   launch stage above, so a visitor who learns one knows the other. */
 export default function Hero() {
   return (
     <section className="relative flex flex-col items-center px-6 pt-16 pb-20 text-center md:pt-24 md:pb-28">
-      <span className="metallic-text mb-8 font-display text-4xl font-light tracking-[0.28em] md:text-6xl">
-        NORMALIZE
-      </span>
+      <div className="mb-8 flex flex-col items-center gap-6">
+        <Coin size="lg" interactive />
+        <span className="metallic-text font-display text-4xl font-light tracking-[0.28em] md:text-6xl">
+          NORMALIZE
+        </span>
+      </div>
 
       <p className="mb-5 text-[11px] tracking-[0.22em] text-muted uppercase">
         Everything else is noise.
