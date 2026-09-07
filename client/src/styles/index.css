@@ -19,12 +19,21 @@
   --color-gold: #d4af37;
   --color-gold-light: #f6e6a8;
 
+  /* Edition accents. Dawn and Dusk are genuinely different cloth, so each
+     carries its own colour through the spotlight's mood animation. */
+  --color-dawn: #b08d57;
+  --color-dusk: #6d7c9a;
+
   /* ONE VOICE: the site is set in the typewriter throughout. Two exceptions,
      kept on their own faces because they are identity rather than copy — the
-     NORMALIZE wordmark and the coin's branch labels. */
+     NORMALIZE wordmark and the coin's branch labels.
+
+     --font-brand is Archivo's VARIABLE font; the "Expanded" width is reached
+     with font-stretch: 125%, not by asking for a family of that name. See the
+     note in index.html. */
   --font-mono: "Courier Prime", "Courier New", Courier, monospace;
   --font-sans: "Courier Prime", "Courier New", Courier, monospace;
-  --font-brand: "Archivo Expanded", "Jost", "Helvetica Neue", Arial, sans-serif;
+  --font-brand: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -64,11 +73,24 @@
 /* ---------------------------------------------------------------------------
    The bespoke layer. Everything below is here because Tailwind utilities
    genuinely cannot express it — 3D transforms with backface culling, animated
-   gradient text clipping, keyframes. Layout, spacing, colour and type all stay
-   in Tailwind classes on the components; this file never grows for those.
+   gradient text clipping, clip-path reveals, keyframes. Layout, spacing, colour
+   and type all stay in Tailwind classes on the components; this file never
+   grows for those.
 --------------------------------------------------------------------------- */
 @layer components {
-  /* ---------- Metallic text ---------- */
+
+  /* ---------- The wordmark ----------
+     The only two places on the site not set in the typewriter. `font-stretch`
+     is what makes Archivo *Expanded*; without it this is plain Archivo. */
+  .wordmark {
+    font-family: var(--font-brand);
+    font-stretch: 125%;
+    font-weight: 700;
+  }
+
+  /* ---------- Metallic text ----------
+     Rule 3: the animated sheen belongs to the wordmark and the coin, nothing
+     else. Do not put this class on a surface. */
   .metallic-text {
     background: linear-gradient(
       100deg,
@@ -84,8 +106,9 @@
   }
 
   /* ---------- Spinning coin (pre-rendered gold faces) ----------
-     The faces are now real .webp files in /public/assets rather than the two
-     ~700KB base64 blobs that used to sit inside the stylesheet. */
+     The CSS coin is the 2.5D fallback where WebGL is unavailable, and the
+     permanent header/footer mark. The WebGL coin in the launch canvas is a
+     different thing entirely — see lib/coinScene.js. */
   .coin-spin { position: relative; display: inline-block; perspective: 600px; flex: none; }
   .coin-spin .coin-inner {
     display: block; position: relative; width: 100%; height: 100%;
@@ -108,12 +131,192 @@
   .coin-sm { width: 50px; height: 50px; }
   .coin-md { width: 56px; height: 56px; }
   .coin-lg { width: 168px; height: 168px; }
+
+  /* ---------- Full-page canvas reveal ----------
+     Rule 2: every secondary surface is a full-viewport canvas, never a drawer
+     or a popup. The reveal is a liquid clip-path — an ellipse that swells from
+     the top edge and relaxes into the full rectangle, so the canvas arrives as
+     a body of liquid rather than a sliding panel.
+
+     inset() with a radius is used rather than circle() because a circle large
+     enough to cover a wide viewport overshoots vertically by so much that the
+     first third of the animation is invisible. */
+  .canvas-surface {
+    clip-path: inset(0 0 0 0 round 0);
+    transition:
+      clip-path 900ms var(--ease-luxe),
+      opacity 420ms var(--ease-out);
+  }
+  .canvas-closed {
+    clip-path: inset(0 42% 100% 42% round 50% 50% 44% 44%);
+    opacity: 0;
+  }
+  .canvas-open {
+    clip-path: inset(0 0 0 0 round 0);
+    opacity: 1;
+  }
+
+  /* The contents lag the liquid slightly, so the canvas fills and *then*
+     resolves into type rather than the two arriving flat together. */
+  .canvas-body {
+    transition: opacity 520ms var(--ease-out) 180ms, transform 640ms var(--ease-out) 180ms;
+  }
+  .canvas-closed .canvas-body { opacity: 0; transform: translateY(14px); }
+  .canvas-open   .canvas-body { opacity: 1; transform: none; }
+
+  /* ---------- The typed document chassis ----------
+     Shared by every reading page: Our Story, Craftsmanship, Careers, Size
+     Guide, Contact, Track Order. Eyebrow, title, typewriter lede, short gold
+     rule, body. */
+  .doc-rule {
+    width: 54px; height: 1px; border: 0;
+    background: var(--color-gold-dark);
+    margin: 0 0 2.25rem;
+  }
+
+  /* Numbered entries carry their index in the margin with hairline dividers. */
+  .doc-list { counter-reset: doc; list-style: none; padding: 0; margin: 2.5rem 0 0; }
+  .doc-list > li {
+    counter-increment: doc;
+    position: relative;
+    padding: 1.75rem 0 1.75rem 3.75rem;
+    border-top: 1px solid var(--color-line);
+  }
+  .doc-list > li:last-child { border-bottom: 1px solid var(--color-line); }
+  .doc-list > li::before {
+    content: counter(doc, decimal-leading-zero);
+    position: absolute; top: 1.75rem; left: 0;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.16em;
+    color: var(--color-gold-dark);
+  }
+  .doc-list h4 {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    line-height: 1.25;
+    color: var(--color-ink);
+    margin-bottom: 0.5rem;
+  }
+  .doc-list p { color: var(--color-muted); }
+
+  /* At narrow widths the margin index sits above its entry rather than
+     squeezing the measure. */
+  @media (max-width: 480px) {
+    .doc-list > li { padding-left: 0; padding-top: 2.5rem; }
+    .doc-list > li::before { top: 1.25rem; }
+  }
+
+  /* Specification tables: hairline rows, label left, value right. */
+  .doc-spec { margin: 2.5rem 0 0; }
+  .doc-spec > div {
+    display: flex; justify-content: space-between; gap: 1.5rem;
+    padding: 0.875rem 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .doc-spec > div:last-child { border-bottom: 1px solid var(--color-line); }
+  .doc-spec dt {
+    font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .doc-spec dd { margin: 0; font-size: 0.8125rem; color: var(--color-ink); }
+
+  /* The closing note on a reading page — set apart by a gold hairline, not a
+     filled box. Rule 3. */
+  .doc-aside {
+    margin-top: 2.75rem;
+    padding-left: 1.25rem;
+    border-left: 1px solid var(--color-gold-dark);
+  }
+  .doc-aside p { font-size: 0.75rem; color: var(--color-muted); margin: 0; }
+
+  .prose-normalize a {
+    color: var(--color-gold-dark);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  /* ---------- Underline form fields ----------
+     Forms are underline fields, never boxes. */
+  .field {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--color-line);
+    border-radius: 0;
+    padding: 0.625rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    transition: border-color 320ms var(--ease-out);
+  }
+  .field::placeholder { color: color-mix(in srgb, var(--color-muted) 60%, transparent); }
+  .field:focus { outline: none; border-bottom-color: var(--color-gold-dark); }
+  textarea.field { resize: vertical; }
+
+  /* ---------- Branch labels ----------
+     The coin's branch labels are the wordmark's typeface, not the body face. */
+  .branch-label {
+    font-family: var(--font-brand);
+    font-stretch: 125%;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+  }
+
+  /* Branches grow out of the coin by drawing themselves. The dash length is
+     set per-path from the measured geometry in LaunchCanvas. */
+  .branch-path {
+    stroke-dashoffset: var(--dash);
+    transition: stroke-dashoffset 1400ms var(--ease-reveal);
+  }
+  .branch-grown .branch-path { stroke-dashoffset: 0; }
+
+  /* ---------- Scroll reveal ----------
+     Cards stagger up into view. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 760ms var(--ease-out), transform 760ms var(--ease-out);
+  }
+  .reveal-in { opacity: 1; transform: none; }
+
+  /* ---------- Genie flight ----------
+     The element the product image is cloned into on its way to the bag. It is
+     positioned and animated entirely from script (lib/genie.js); this only
+     establishes the layer and stops it catching pointer events. */
+  .genie-flier {
+    position: fixed;
+    z-index: 300;
+    pointer-events: none;
+    will-change: transform, opacity, clip-path;
+    object-fit: cover;
+    border-radius: 1px;
+  }
 }
 
 @keyframes shine { to { background-position: -240% 0; } }
 @keyframes coin-rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 
+/* The bag icon's acknowledgement once a flight lands. */
+@keyframes bag-catch {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(0.86); }
+  100% { transform: scale(1); }
+}
+.bag-catch { animation: bag-catch 460ms var(--ease-out); }
+
 @media (prefers-reduced-motion: reduce) {
   .coin-spin .coin-inner,
   .metallic-text { animation: none; }
+
+  /* Canvases still arrive, they just stop being liquid about it. */
+  .canvas-surface { transition: opacity 200ms linear; clip-path: none; }
+  .canvas-closed  { clip-path: none; }
+  .canvas-open    { clip-path: none; }
+  .canvas-body    { transition: opacity 200ms linear; transform: none; }
+  .canvas-closed .canvas-body { transform: none; }
+
+  .branch-path { transition: none; stroke-dashoffset: 0; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .bag-catch { animation: none; }
 }
