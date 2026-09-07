@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HOTSPOTS } from "../data/hotspots";
 import { useCart } from "../context/CartContext";
 import Coin from "./Coin";
@@ -13,12 +13,17 @@ import Coin from "./Coin";
    three.js and gsap are imported dynamically so they stay out of the main
    bundle — a visitor who never scrolls past the hero never downloads them. */
 /* How much air the scene frames around the coin, in world units — the coin is
-   2 units across, so its on-screen diameter is COIN_RATIO of the stage's
-   tighter axis. This is the single source of truth: it is handed to
-   createCoinScene, and used here to sit the branch anchors on the rim and to
-   size the coin's landing in the header. */
-const FRAME_EXTENT = 3.6;
-const COIN_RATIO = 2 / FRAME_EXTENT;
+   2 units across, so its on-screen diameter is 2/extent of the stage's tighter
+   axis. This is the single source of truth: it is handed to createCoinScene,
+   and used here to sit the branch anchors on the rim and to size the coin's
+   landing in the header.
+
+   Below 768px the coin is deliberately smaller. The brief asks for a smaller
+   coin there, and the geometry demands it: the branches splay into an outward
+   halo, and their labels need horizontal room on either side that a 375px
+   viewport does not have around a full-width coin. */
+const frameExtentFor = (small) => (small ? 4.6 : 3.6);
+const coinRatioFor = (small) => 2 / frameExtentFor(small);
 
 export default function LaunchCanvas({ onNavigate }) {
   const sectionRef = useRef(null);
@@ -26,6 +31,7 @@ export default function LaunchCanvas({ onNavigate }) {
   const coinLayerRef = useRef(null);
   const branchLayerRef = useRef(null);
   const sceneRef = useRef(null);
+  const labelRefs = useRef(new Map());
 
   const { badge } = useCart();
 
@@ -53,8 +59,8 @@ export default function LaunchCanvas({ onNavigate }) {
      breakpoints are radial for that reason; what changes below 768px is the
      reach — a tighter halo around a smaller coin.
 
-     COIN_RATIO is the module constant above — the same number the scene is
-     built with, so the anchors cannot drift off the rim. */
+     The ratio comes from coinRatioFor() — the same function the scene is built
+     with, so the anchors cannot drift off the rim. */
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
     const onChange = () => setIsSmall(mq.matches);
@@ -65,11 +71,13 @@ export default function LaunchCanvas({ onNavigate }) {
       if (!stage) return;
       const small = mq.matches;
       const min = Math.min(stage.clientWidth, stage.clientHeight);
-      const coinRadius = (min * COIN_RATIO) / 2;
+      const coinRadius = (min * coinRatioFor(small)) / 2;
       setHalo({
         // Just inside the rim, so the branch reads as growing out of the metal.
         r: coinRadius * 0.94,
-        out: small ? Math.min(104, coinRadius * 0.62) : Math.min(190, coinRadius * 0.78),
+        // Short reach on mobile: the label still has to clear the screen edge
+        // once it extends from the branch tip.
+        out: small ? Math.min(52, coinRadius * 0.5) : Math.min(190, coinRadius * 0.78),
       });
     };
     measure();
@@ -111,7 +119,7 @@ export default function LaunchCanvas({ onNavigate }) {
       gsap.registerPlugin(ScrollTrigger);
 
       const small = window.matchMedia("(max-width: 768px)").matches;
-      const scene = createCoinScene(coinLayer, { isSmall: small, frameExtent: FRAME_EXTENT });
+      const scene = createCoinScene(coinLayer, { isSmall: small, frameExtent: frameExtentFor(small) });
       if (!scene) {                      // no WebGL — the CSS coin stands in
         setMode("fallback");
         setGrown(true);
@@ -145,7 +153,7 @@ export default function LaunchCanvas({ onNavigate }) {
         return {
           dx: (slotBox.left + slotBox.width / 2) - sw / 2,
           dy: (slotBox.top + slotBox.height / 2) - sh / 2,
-          scale: slotBox.width / (Math.min(sw, sh) * COIN_RATIO),
+          scale: slotBox.width / (Math.min(sw, sh) * coinRatioFor(small)),
         };
       };
 
@@ -217,6 +225,35 @@ export default function LaunchCanvas({ onNavigate }) {
 
     return () => { cancelled = true; cleanup(); };
   }, []);
+
+  /* A label hung off a branch tip can run off the side of a narrow screen —
+     "Your bag (3)" is wider than the margin a 375px viewport leaves beside the
+     coin. Rather than hand-tune bearings per breakpoint and re-tune them
+     whenever the copy changes, each label is measured after layout and nudged
+     back inside by however much it overhangs.
+
+     useLayoutEffect so the correction lands in the same frame as the placement
+     it corrects; the branches are fading in at this point, so nothing flickers. */
+  useLayoutEffect(() => {
+    const labels = [...labelRefs.current.values()].filter(Boolean);
+    if (labels.length === 0) return;
+
+    const MARGIN = 10;
+    for (const el of labels) {
+      el.style.setProperty("--clamp", "0px");
+    }
+    // Measure them all before writing, so one label's correction cannot force a
+    // re-layout that invalidates the next one's rectangle.
+    const shifts = labels.map((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.left < MARGIN) return MARGIN - r.left;
+      if (r.right > window.innerWidth - MARGIN) return window.innerWidth - MARGIN - r.right;
+      return 0;
+    });
+    labels.forEach((el, i) => {
+      if (shifts[i]) el.style.setProperty("--clamp", `${Math.round(shifts[i])}px`);
+    });
+  }, [halo, isSmall, grown, badge]);
 
   /* Each branch keeps its own hand-set bearing — they are deliberately not
      evenly spaced — but the distance along it is measured from the coin. */
@@ -330,12 +367,14 @@ export default function LaunchCanvas({ onNavigate }) {
                 {/* Label at the branch tip. Archivo Expanded — one of the two
                     places on the site not set in the typewriter. */}
                 <span
-                  className="branch-label absolute text-[11px] whitespace-nowrap text-gold-light
-                             uppercase transition-colors group-hover:text-white-warm"
+                  ref={(el) => labelRefs.current.set(h.key, el)}
+                  className="branch-label absolute text-[10px] whitespace-nowrap text-gold-light
+                             uppercase transition-colors group-hover:text-white-warm md:text-[11px]"
                   style={{
                     transform:
                       `translate(${place.nx}, ${place.ny}) ` +
-                      `translateX(${place.flip ? "-100%" : "0"})`,
+                      `translateX(${place.flip ? "-100%" : "0"}) ` +
+                      `translateX(var(--clamp, 0px))`,
                   }}
                 >
                   {h.label}
