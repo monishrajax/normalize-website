@@ -17,7 +17,7 @@ function fillTokens(html, config) {
     .replaceAll("{{freeShippingThreshold}}", money(config.freeShippingThreshold));
 }
 
-export default function InfoModal({ section, onClose, config }) {
+export default function InfoPanel({ section, onClose, config }) {
   const content = section ? INFO_CONTENT[section] : null;
   const Custom = section ? CUSTOM[section] : null;
 

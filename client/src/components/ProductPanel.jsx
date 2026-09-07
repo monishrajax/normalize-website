@@ -9,7 +9,7 @@ const ACCORDIONS = [
   ["care", "Care"],
 ];
 
-export default function ProductModal({ product, onClose }) {
+export default function ProductPanel({ product, onClose }) {
   const { addToBag, wishlist, toggleWishlist } = useCart();
   const imageRef = useRef(null);
   const [variant, setVariant] = useState("");

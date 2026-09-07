@@ -16,7 +16,7 @@ const FIELDS = [
 
 const EMPTY = { name: "", email: "", phone: "", address: "", city: "", state: "", pincode: "" };
 
-export default function CheckoutModal({ open, onClose }) {
+export default function CheckoutPanel({ open, onClose }) {
   const { items, totals, clearCart, promoCode } = useCart();
   const loadRazorpay = useRazorpay();
 

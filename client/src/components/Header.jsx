@@ -19,10 +19,11 @@ const ACTION =
   "grid h-11 min-w-11 grid-flow-col place-items-center gap-1.5 text-muted transition-colors hover:text-ink";
 
 function Count({ n, tone = "" }) {
+  /* Always a badge on the icon, at every width. Letting it fall back into the
+     flow at lg pushed it onto a second line under the word. */
   return (
     <span
-      className={`absolute -top-0.5 -right-1 text-[9px] leading-none tabular-nums ${tone}
-                  lg:static lg:text-[11px]`}
+      className={`absolute -top-1 -right-2 text-[9px] leading-none tabular-nums ${tone}`}
     >
       ({n})
     </span>

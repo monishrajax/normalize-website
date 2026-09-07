@@ -10,9 +10,9 @@ import ProductsPanel from "./components/ProductsPanel";
 import SearchPanel from "./components/SearchPanel";
 import CartPanel from "./components/CartPanel";
 import WishlistPanel from "./components/WishlistPanel";
-import ProductModal from "./components/ProductModal";
-import CheckoutModal from "./components/CheckoutModal";
-import InfoModal from "./components/InfoModal";
+import ProductPanel from "./components/ProductPanel";
+import CheckoutPanel from "./components/CheckoutPanel";
+import InfoPanel from "./components/InfoPanel";
 import Footer from "./components/Footer";
 
 /* The launch canvas pulls in three.js and gsap — by far the heaviest thing on
@@ -105,9 +105,9 @@ export default function App() {
         onClose={close}
         onCheckout={() => { close(); setCheckoutOpen(true); }}
       />
-      <ProductModal product={selected} onClose={() => setSelected(null)} />
-      <CheckoutModal open={checkoutOpen} onClose={() => setCheckoutOpen(false)} />
-      <InfoModal
+      <ProductPanel product={selected} onClose={() => setSelected(null)} />
+      <CheckoutPanel open={checkoutOpen} onClose={() => setCheckoutOpen(false)} />
+      <InfoPanel
         section={infoSection}
         onClose={() => setInfoSection(null)}
         config={config}
