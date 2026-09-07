@@ -11,24 +11,38 @@ import { useCart } from "../context/CartContext";
    crest swells, and the name rises word by word out of masked rows. Each step
    is a transition with its own delay, all gated on one `entered` flag. */
 
-/* Dawn and Dusk are genuinely different cloth, so each carries its own light
-   across the stage rather than just relabelling the same picture. */
+/* Each edition carries its own light across the stage rather than just
+   relabelling the same picture.
+
+   COLOUR ONLY. This used to carry a line of product copy per edition, and that
+   copy was wrong — it described an "ecru body" when the body is indigo jute.
+   Product facts belong in the catalogue, which is the one place that is allowed
+   to describe the thing being sold; the difference between the editions is
+   carried by the photograph, which swaps with the choice. */
 const MOODS = {
   Dawn: {
     accent: "var(--color-dawn)",
     wash: "radial-gradient(120% 90% at 26% 18%, rgba(176,141,87,0.34), transparent 62%)",
-    note: "Warm sand handles · natural ecru body",
   },
   Dusk: {
     accent: "var(--color-dusk)",
     wash: "radial-gradient(120% 90% at 74% 22%, rgba(109,124,154,0.34), transparent 62%)",
-    note: "Slate blue handles · natural ecru body",
   },
 };
+
+/* The long-form copy, straight off the product document. During launch this
+   section IS the product page, so it has to carry the same detail the quick-view
+   panel does — not a hand-written summary of it. */
+const ACCORDIONS = [
+  ["material", "Material"],
+  ["design", "Design"],
+  ["care", "Care"],
+];
 
 export default function Spotlight({ product }) {
   const { addToBag } = useCart();
   const [variant, setVariant] = useState(product?.sizes?.[0] || "");
+  const [openDetail, setOpenDetail] = useState("material");
   const [entered, setEntered] = useState(false);
   const sectionRef = useRef(null);
   const imageRef = useRef(null);
@@ -180,13 +194,6 @@ export default function Spotlight({ product }) {
               })}
             </div>
 
-            <p
-              key={variant}
-              className="mb-8 text-[11px] tracking-[0.12em] text-cream/50 uppercase"
-            >
-              {mood.note}
-            </p>
-
             {/* Launch mode: PREBOOK, not "Add to Bag". */}
             <button
               onClick={handleAdd}
@@ -197,8 +204,43 @@ export default function Spotlight({ product }) {
               Prebook — {money(product.price)}
             </button>
 
+            {/* Material · Design · Care, exactly as the catalogue holds them. */}
+            <div className="mt-10 border-t border-cream/15">
+              {ACCORDIONS.map(([key, label]) => {
+                const body = product.details?.[key];
+                if (!body) return null;
+                const isOpen = openDetail === key;
+                return (
+                  <div key={key} className="border-b border-cream/15">
+                    <button
+                      onClick={() => setOpenDetail(isOpen ? "" : key)}
+                      aria-expanded={isOpen}
+                      className="flex min-h-11 w-full items-center justify-between text-left"
+                    >
+                      <span className="text-[11px] tracking-[0.16em] text-cream uppercase">{label}</span>
+                      <span className={`text-cream/50 transition-transform duration-300 ${isOpen ? "rotate-45" : ""}`}>
+                        +
+                      </span>
+                    </button>
+                    {/* Animating the grid row keeps open/close smooth without
+                        measuring the content on every render. */}
+                    <div className={`grid transition-all duration-400 ease-(--ease-out)
+                                     ${isOpen ? "grid-rows-[1fr] pb-5 opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                      <div className="overflow-hidden">
+                        <div
+                          className="max-w-prose space-y-3 text-sm leading-relaxed text-cream/70 [&_p]:mb-3"
+                          dangerouslySetInnerHTML={{ __html: body }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Brand-level facts only — nothing here describes the product, so
+                nothing here can drift from it. */}
             <ul className="mt-8 space-y-1.5 text-[11px] tracking-wide text-cream/50">
-              <li>Natural ecru cotton handles · white lining</li>
               <li>Made in small batches</li>
               <li>Easy 14-day returns</li>
               <li>Made in Chennai</li>
