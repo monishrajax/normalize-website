@@ -351,6 +351,36 @@ that stretch away.
   `(offsetWidth/2, offsetHeight/2)`. Measuring `getBoundingClientRect()` at setup
   reads it where it sits in normal flow and the coin overshoots the header.
 
+## Coin interaction
+
+The coin is a real control, not a decoration:
+
+- **Drag** horizontally to flip it, with momentum on release.
+- **Tap** (a press that travels under 5px in under 350ms) turns it to its other
+  face — `flipOver()` snaps to the nearest multiple of π, so it stays honest
+  however many times it has been spun.
+- **Keyboard**: the canvas takes a tab stop (`tabIndex = 0`, `role="button"`,
+  with an aria-label). Arrow keys nudge it round; Enter/Space turns it over.
+  Without this the coin is unreachable for anyone not using a mouse.
+- `spin.target` suppresses both idle drift and scroll-spin while a deliberate
+  flip is easing, so nothing fights the user. `addSpin()` returns early during a
+  drag or a flip for the same reason.
+
+Three things here are easy to break by accident:
+
+1. **The branch layer must keep `pointer-events: none`.** It is an
+   `absolute inset-0` div sitting *above* the canvas, so without it every
+   pointerdown meant for the coin is swallowed and the coin cannot be dragged at
+   all — which is exactly how it shipped before. The branch buttons opt back in
+   individually with `pointer-events-auto`.
+2. **`touch-action: pan-y`, never `none`.** The canvas covers the whole pinned
+   stage; with `none`, a phone user cannot swipe past the launch section. `pan-y`
+   leaves vertical scrolling to the browser and keeps horizontal drags for the
+   coin, which is exactly the split a Y-axis flip wants.
+3. **Tap detection runs before `releasePointerCapture`.** That call throws when
+   the pointer was never captured, and a throw there silently swallows the tap.
+   Both capture calls are best-effort and wrapped.
+
 ## The genie
 
 `lib/genie.js` — plain DOM plus the Web Animations API, deliberately not
@@ -386,6 +416,10 @@ clamp is what keeps "Your bag (12)" on screen without per-breakpoint tuning.
 Checked in a real browser against the running stack, not inferred:
 
 - The coin lands exactly on the header slot centre, with a visible arc mid-flight
+- Coin interaction: a real mouse drag turns it (180px → 1.98 rad) and it gains
+  momentum; a tap sets a flip target of exactly π; the canvas takes focus and
+  ArrowRight adds 2.4 rad/s. The *animation* of those could not be watched in the
+  Browser pane — see the note below — but the state transitions were checked
 - Add to bag: badge reads (0) 120 ms into the flight and (1) once it lands; the
   bag never opens itself; storage holds only `{productId, variant, qty}`
 - Products canvas: 12 cards, **zero** native `<select>` elements, body scroll
