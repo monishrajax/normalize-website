@@ -1,4 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+} from "react";
+import { flyToBag, prefersReducedMotion } from "../lib/genie";
 
 const CartContext = createContext(null);
 
@@ -74,7 +77,30 @@ export function CartProvider({ children, products, config }) {
     [lines, byId]
   );
 
-  const addToCart = useCallback((product, variant, qty = 1) => {
+  const count = useMemo(() => items.reduce((n, l) => n + l.qty, 0), [items]);
+
+  /* ---- The bag badge lags the cart on purpose --------------------------------
+     `count` is the truth; `badge` is what the header renders. While a genie
+     flight is in the air the badge is held at its old value, because the brief's
+     rule is that the count ticks over when the artwork lands — never mid-flight.
+     Everything that is not an add-to-bag (removing a line, a quantity step, the
+     cart being cleared after payment) syncs immediately.                        */
+  const [badge, setBadge] = useState(count);
+  const flightsRef = useRef(0);
+  const countRef = useRef(count);
+  countRef.current = count;
+
+  useEffect(() => {
+    if (flightsRef.current === 0) setBadge(count);
+  }, [count]);
+
+  /* The header registers its bag icon here so a product image anywhere on the
+     site knows where to fly to, without prop-drilling a ref through every
+     component that can add to the bag. */
+  const bagTargetRef = useRef(null);
+  const registerBagTarget = useCallback((el) => { bagTargetRef.current = el; }, []);
+
+  const addLine = useCallback((product, variant, qty) => {
     setLines((prev) => {
       const i = prev.findIndex((l) => l.productId === product.id && l.variant === variant);
       if (i === -1) return [...prev, { productId: product.id, variant, qty }];
@@ -83,6 +109,29 @@ export function CartProvider({ children, products, config }) {
       return next;
     });
   }, []);
+
+  /**
+   * Add to bag, with the flight. `sourceEl` is the product image the artwork is
+   * cloned from; pass null and it degrades to a plain add.
+   *
+   * The line lands in the cart immediately — only the badge waits — so a
+   * customer who opens the bag mid-flight sees the right contents.
+   */
+  const addToBag = useCallback(async (product, variant, qty = 1, sourceEl = null, imageSrc = null) => {
+    addLine(product, variant, qty);
+
+    if (!sourceEl || !bagTargetRef.current || prefersReducedMotion()) return;
+
+    flightsRef.current += 1;
+    try {
+      await flyToBag(sourceEl, bagTargetRef.current, imageSrc);
+    } finally {
+      flightsRef.current = Math.max(0, flightsRef.current - 1);
+      // Read the live count, not the one captured when the flight began — a
+      // second add may have landed while this one was in the air.
+      if (flightsRef.current === 0) setBadge(countRef.current);
+    }
+  }, [addLine]);
 
   const setQty = useCallback((productId, variant, qty) => {
     setLines((prev) =>
@@ -124,11 +173,10 @@ export function CartProvider({ children, products, config }) {
     return { subtotal, discount, shipping, total: subtotal - discount + shipping };
   }, [items, promoRate, config]);
 
-  const count = useMemo(() => items.reduce((n, l) => n + l.qty, 0), [items]);
-
   const value = {
-    items, count, totals, wishlist,
-    addToCart, setQty, removeLine, clearCart, toggleWishlist,
+    items, count, badge, totals, wishlist,
+    addToBag, setQty, removeLine, clearCart, toggleWishlist,
+    registerBagTarget,
     promoCode, promoRate, setPromoCode, setPromoRate,
   };
 
