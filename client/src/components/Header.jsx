@@ -12,10 +12,22 @@ function Icon({ path, className = "" }) {
 }
 
 /* Every header control is at least 44px square. Below 768px the actions lose
-   their words and keep only the icon. */
+   their words and keep only the icon — and their counts ride ON the icon as a
+   badge rather than sitting beside it as text, because three counts laid out
+   inline push the centred wordmark off a 375px screen. */
 const ACTION =
-  "grid h-11 min-w-11 place-items-center gap-1.5 text-muted transition-colors hover:text-ink " +
-  "grid-flow-col";
+  "grid h-11 min-w-11 grid-flow-col place-items-center gap-1.5 text-muted transition-colors hover:text-ink";
+
+function Count({ n, tone = "" }) {
+  return (
+    <span
+      className={`absolute -top-0.5 -right-1 text-[9px] leading-none tabular-nums ${tone}
+                  lg:static lg:text-[11px]`}
+    >
+      ({n})
+    </span>
+  );
+}
 
 export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, onOpenCart }) {
   const { badge, wishlist, registerBagTarget } = useCart();
@@ -41,14 +53,14 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
       className={`sticky top-0 z-50 border-b transition-colors duration-500 ease-(--ease-out)
                   ${scrolled ? "border-line bg-cream/95 backdrop-blur-md" : "border-transparent bg-cream"}`}
     >
-      <div className="mx-auto flex max-w-(--container-site) items-center justify-between gap-3 px-4 py-2 md:px-8">
+      <div className="mx-auto flex max-w-(--container-site) items-center justify-between gap-2 px-3 py-2 md:gap-3 md:px-8">
         {/* Left: one link, to the products canvas. It teleports — it does not
             scroll the home page. */}
         <div className="flex flex-1 items-center">
           <button
             onClick={onOpenProducts}
-            className="grid h-11 place-items-center px-1 text-[11px] tracking-[0.16em] text-muted
-                       uppercase transition-colors hover:text-ink"
+            className="grid h-11 place-items-center px-1 text-[10px] tracking-[0.1em] text-muted
+                       uppercase transition-colors hover:text-ink md:text-[11px] md:tracking-[0.16em]"
           >
             Products
           </button>
@@ -61,7 +73,7 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
           <span id="header-coin-slot" className="hidden sm:inline-block">
             <Coin size="sm" />
           </span>
-          <span className="metallic-text wordmark text-base tracking-[0.2em] sm:text-xl">
+          <span className="metallic-text wordmark text-[13px] tracking-[0.1em] sm:text-lg sm:tracking-[0.2em]">
             NORMALIZE
           </span>
         </a>
@@ -74,21 +86,21 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
           </button>
 
           <button onClick={onOpenWishlist} aria-label={`Wishlist (${wishlist.length})`} className={ACTION}>
-            <Icon path={<path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2.2 0 3.7 1.3 6 3.8C14.3 5.3 15.8 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />} />
+            <span className="relative grid place-items-center">
+              <Icon path={<path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2.2 0 3.7 1.3 6 3.8C14.3 5.3 15.8 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />} />
+              <Count n={wishlist.length} />
+            </span>
             <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">Wishlist</span>
-            <span className="text-[11px] tabular-nums">({wishlist.length})</span>
           </button>
 
           <button onClick={onOpenCart} aria-label={`Bag (${badge})`} className={ACTION}>
             {/* The genie lands here — hence the ref on the icon itself rather
                 than the button, so the artwork aims at the bag, not the label. */}
-            <span ref={bagIconRef} className="grid place-items-center">
+            <span ref={bagIconRef} className="relative grid place-items-center">
               <Icon path={<><path d="M6 8h12l-1 12H7L6 8z" /><path d="M9 8V6a3 3 0 016 0v2" /></>} />
+              <Count n={badge} tone={badge > 0 ? "text-gold-dark" : ""} />
             </span>
             <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">Bag</span>
-            <span className={`text-[11px] tabular-nums transition-colors ${badge > 0 ? "text-gold-dark" : ""}`}>
-              ({badge})
-            </span>
           </button>
         </div>
       </div>
