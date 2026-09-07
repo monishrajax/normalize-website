@@ -417,6 +417,7 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
   }
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("keydown", onKeyDown);
+  canvas.__spin = spin; // TEMP PROBE
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
   window.addEventListener("pointercancel", onPointerUp);
