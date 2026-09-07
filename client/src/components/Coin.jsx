@@ -136,6 +136,7 @@ export default function Coin({ size = "md", interactive = false, className = "" 
 
     root.addEventListener("pointerdown", onDown);
     root.addEventListener("keydown", onKeyDown);
+    root.__coin = s; // TEMP PROBE
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
