@@ -353,7 +353,10 @@ that stretch away.
 
 ## Coin interaction
 
-The coin is a real control, not a decoration:
+There are two coins and they must teach the same gestures: the WebGL one on the
+launch stage (`lib/coinScene.js`) and the CSS one (`components/Coin.jsx`) used
+in the hero and as the no-WebGL fallback. Both are real controls, not
+decoration, and both implement the same model — change one, change the other:
 
 - **Drag** horizontally to flip it, with momentum on release.
 - **Tap** (a press that travels under 5px in under 350ms) turns it to its other
@@ -366,7 +369,10 @@ The coin is a real control, not a decoration:
   flip is easing, so nothing fights the user. `addSpin()` returns early during a
   drag or a flip for the same reason.
 
-Three things here are easy to break by accident:
+The CSS coin stays passive in the header and footer — the header one lives
+inside an `<a href="#top">`, and a draggable control inside a link fights it.
+
+Four things here are easy to break by accident:
 
 1. **The branch layer must keep `pointer-events: none`.** It is an
    `absolute inset-0` div sitting *above* the canvas, so without it every
@@ -380,6 +386,11 @@ Three things here are easy to break by accident:
 3. **Tap detection runs before `releasePointerCapture`.** That call throws when
    the pointer was never captured, and a throw there silently swallows the tap.
    Both capture calls are best-effort and wrapped.
+4. **The CSS coin's pointer listeners belong on the OUTER span, never on
+   `.coin-inner`.** The inner span is the element being rotated, and its hit box
+   collapses to literally 0px wide as it passes edge-on — measured, not
+   theorised. Listening there leaves the coin ungrabbable at exactly the angle a
+   visitor most wants to correct.
 
 ## The genie
 
@@ -400,9 +411,10 @@ clamp is what keeps "Your bag (12)" on screen without per-breakpoint tuning.
 
 ## Judgement calls worth knowing
 
-- **No coin in the hero.** The brief's hero is eyebrow, headline, one line of
-  positioning, one gold button. The coin's home is the launch canvas above it
-  and the header it docks into; a third copy in between read as repetition.
+- **The hero coin was removed, then restored on request.** The brief's hero
+  lists eyebrow, headline, one line of positioning, one gold button — no coin —
+  so it was cut as repetition against the launch canvas above and the header it
+  docks into. That call was reversed: the coin is back, and interactive.
 - **`MobileMenu` is gone.** The brief wants categories in a full-screen panel;
   the Products canvas already is one, so a second panel duplicating it was
   removed rather than kept in parallel.
@@ -416,10 +428,16 @@ clamp is what keeps "Your bag (12)" on screen without per-breakpoint tuning.
 Checked in a real browser against the running stack, not inferred:
 
 - The coin lands exactly on the header slot centre, with a visible arc mid-flight
-- Coin interaction: a real mouse drag turns it (180px → 1.98 rad) and it gains
-  momentum; a tap sets a flip target of exactly π; the canvas takes focus and
-  ArrowRight adds 2.4 rad/s. The *animation* of those could not be watched in the
-  Browser pane — see the note below — but the state transitions were checked
+- WebGL coin: a real mouse drag turns it (180px → 1.98 rad) with momentum; a tap
+  sets a flip target of exactly π; the canvas takes focus and ArrowRight adds
+  2.4 rad/s
+- Hero (CSS) coin: 100px of drag turns it exactly 60° (0.6°/px) and carries
+  momentum; the grab still works with the inner span measured at 0px wide;
+  tap from 150° targets 360° and from 0° targets 180°; a 420ms press and a
+  drag both correctly do *not* flip; arrows add and reverse velocity with
+  `preventDefault`, Enter and Space flip
+- The flip easing was simulated across 20/30/60fps: it lands exactly on target
+  in ~0.9s, never overshoots, and is frame-rate independent
 - Add to bag: badge reads (0) 120 ms into the flight and (1) once it lands; the
   bag never opens itself; storage holds only `{productId, variant, qty}`
 - Products canvas: 12 cards, **zero** native `<select>` elements, body scroll
