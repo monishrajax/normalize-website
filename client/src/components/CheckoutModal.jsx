@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Panel from "./Panel";
 import { api, money } from "../lib/api";
 import { useCart } from "../context/CartContext";
 import { useRazorpay } from "../hooks/useRazorpay";
@@ -104,23 +105,16 @@ export default function CheckoutModal({ open, onClose }) {
     }
   }
 
-  if (!open) return null;
-
+  /* Rule 2: checkout is a full-viewport canvas like every other secondary
+     surface — it was the last modal on the site. */
   return (
-    <div role="dialog" aria-modal="true"
-         className="fixed inset-0 z-[150] flex items-start justify-center overflow-y-auto bg-ink/70 p-4 backdrop-blur-sm md:p-8">
-      <div className="relative w-full max-w-2xl border border-line bg-cream p-7 md:p-10">
-        <button onClick={close} aria-label="Close checkout"
-                className="absolute top-4 right-5 text-2xl leading-none text-ink transition-opacity hover:opacity-60">
-          &times;
-        </button>
-
-        {confirmed ? (
-          <ConfirmationView data={confirmed} onClose={close} />
-        ) : (
-          <>
-            <p className="mb-1 text-[11px] tracking-[0.2em] text-muted uppercase">Checkout</p>
-            <h2 className="mb-8 font-display text-3xl text-ink">Where should it go?</h2>
+    <Panel open={open} onClose={close} eyebrow="Checkout">
+      {confirmed ? (
+        <ConfirmationView data={confirmed} onClose={close} />
+      ) : (
+        <>
+          <h2 className="mb-5 font-display text-4xl text-ink md:text-5xl">Where should it go?</h2>
+          <hr className="doc-rule" />
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {FIELDS.map((f) => (
@@ -141,8 +135,7 @@ export default function CheckoutModal({ open, onClose }) {
                                                   title: "10-digit Indian mobile number" } : {})}
                     {...(f.name === "pincode" ? { pattern: "[1-9][0-9]{5}", maxLength: 6,
                                                   title: "6-digit PIN code" } : {})}
-                    className="w-full border border-line bg-transparent px-3 py-2.5 text-sm text-ink
-                               focus:border-gold-dark focus:outline-none"
+                    className="field"
                   />
                 </label>
               ))}
@@ -180,7 +173,7 @@ export default function CheckoutModal({ open, onClose }) {
               )}
 
               <button type="submit" disabled={busy || items.length === 0}
-                      className="mt-2 w-full bg-ink px-8 py-4 text-[11px] tracking-[0.18em] text-cream uppercase
+                      className="mt-2 min-h-11 w-full bg-ink px-8 py-4 text-[11px] tracking-[0.18em] text-cream uppercase
                                  transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40 sm:col-span-2">
                 {busy ? "Please wait…" : `Pay ${money(shown.total)}`}
               </button>
@@ -188,11 +181,10 @@ export default function CheckoutModal({ open, onClose }) {
               <p className="text-center text-[10px] tracking-wide text-muted sm:col-span-2">
                 Payments secured by Razorpay. Card details never touch our servers.
               </p>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
+          </form>
+        </>
+      )}
+    </Panel>
   );
 }
 

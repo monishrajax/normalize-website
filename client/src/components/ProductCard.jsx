@@ -6,7 +6,9 @@ export default function ProductCard({ product, onSelect }) {
   const wished = wishlist.includes(product.id);
 
   return (
-    <article className="group relative">
+    {/* .reveal is picked up by useReveal on the grid — cards stagger up
+        into view rather than all appearing at once. */}
+    <article className="reveal group relative">
       <button
         onClick={() => onSelect(product)}
         className="block w-full text-left"
@@ -51,8 +53,8 @@ export default function ProductCard({ product, onSelect }) {
         onClick={() => toggleWishlist(product.id)}
         aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
         aria-pressed={wished}
-        className="absolute top-3 right-3 rounded-full bg-cream/85 p-2 backdrop-blur-sm
-                   transition-transform duration-300 ease-(--ease-out) hover:scale-110"
+        className="absolute top-2 right-2 grid h-11 w-11 place-items-center rounded-full bg-cream/85
+                   backdrop-blur-sm transition-transform duration-300 ease-(--ease-out) hover:scale-110"
       >
         <svg viewBox="0 0 24 24" strokeWidth="1.4"
              fill={wished ? "currentColor" : "none"} stroke="currentColor"

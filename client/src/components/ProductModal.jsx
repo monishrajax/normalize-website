@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Panel from "./Panel";
 import { money } from "../lib/api";
 import { useCart } from "../context/CartContext";
-import { useToast } from "../context/ToastContext";
 
 const ACCORDIONS = [
   ["material", "Material"],
@@ -10,9 +9,9 @@ const ACCORDIONS = [
   ["care", "Care"],
 ];
 
-export default function ProductModal({ product, onClose, onOpenCart }) {
-  const { addToCart, wishlist, toggleWishlist } = useCart();
-  const { showToast } = useToast();
+export default function ProductModal({ product, onClose }) {
+  const { addToBag, wishlist, toggleWishlist } = useCart();
+  const imageRef = useRef(null);
   const [variant, setVariant] = useState("");
   const [open, setOpen] = useState("material");
 
@@ -31,10 +30,12 @@ export default function ProductModal({ product, onClose, onOpenCart }) {
   const wished = wishlist.includes(product.id);
 
   const handleAdd = () => {
-    addToCart(product, variant, 1);
-    showToast(`${product.name} added to your bag.`);
+    /* The artwork flies to the bag and the badge ticks over when it lands —
+       no toast, and the bag does not open itself. The source rectangle is
+       measured synchronously here, so closing the canvas on the next line
+       cannot pull it out from under the flight. */
+    addToBag(product, variant, 1, imageRef.current, image);
     onClose();
-    onOpenCart?.();
   };
 
   return (
@@ -42,7 +43,7 @@ export default function ProductModal({ product, onClose, onOpenCart }) {
       <div className="grid gap-10 md:grid-cols-2 md:gap-16">
         <div className="bg-cream-dark">
           {image ? (
-            <img src={image} alt={product.name} width="800" height="1000"
+            <img ref={imageRef} src={image} alt={product.name} width="800" height="1000"
                  loading="eager" decoding="async"
                  className="w-full object-cover" />
           ) : (
@@ -65,7 +66,7 @@ export default function ProductModal({ product, onClose, onOpenCart }) {
               <div className="mb-8 flex flex-wrap gap-2">
                 {product.sizes.map((s) => (
                   <button key={s} onClick={() => setVariant(s)} aria-pressed={variant === s}
-                          className={`border px-5 py-2 text-[11px] tracking-[0.12em] uppercase transition-all
+                          className={`min-h-11 border px-5 text-[11px] tracking-[0.12em] uppercase transition-all
                                       ${variant === s
                                         ? "border-ink bg-ink text-cream"
                                         : "border-line text-muted hover:border-ink hover:text-ink"}`}>
@@ -80,7 +81,7 @@ export default function ProductModal({ product, onClose, onOpenCart }) {
             <button
               onClick={handleAdd}
               disabled={!product.isSellable}
-              className="flex-1 bg-ink px-8 py-4 text-[11px] tracking-[0.18em] text-cream uppercase
+              className="min-h-11 flex-1 bg-ink px-8 py-4 text-[11px] tracking-[0.18em] text-cream uppercase
                          transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {product.isSellable ? "Add to bag" : "Coming soon"}
@@ -89,7 +90,7 @@ export default function ProductModal({ product, onClose, onOpenCart }) {
               onClick={() => toggleWishlist(product.id)}
               aria-pressed={wished}
               aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
-              className="border border-line px-5 transition-colors hover:border-ink"
+              className="grid min-h-11 w-12 place-items-center border border-line transition-colors hover:border-ink"
             >
               <svg viewBox="0 0 24 24" strokeWidth="1.4" fill={wished ? "currentColor" : "none"}
                    stroke="currentColor" className={`h-4 w-4 ${wished ? "text-gold-dark" : "text-ink"}`}>

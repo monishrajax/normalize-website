@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Coin from "./Coin";
-import { useToast } from "../context/ToastContext";
 
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/mdenedzo";
 
@@ -19,9 +18,11 @@ const LINKS = [
 ];
 
 export default function Footer({ onOpenInfo }) {
-  const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  // Rule 6: no toasts. The form answers in its own place, where the person who
+  // submitted it is already looking.
+  const [status, setStatus] = useState({ text: "", kind: "" });
 
   async function subscribe(e) {
     e.preventDefault();
@@ -34,9 +35,9 @@ export default function Footer({ onOpenInfo }) {
       });
       if (!res.ok) throw new Error("Something went wrong. Please try again.");
       setEmail("");
-      showToast("Thanks — you're on the list.");
+      setStatus({ text: "Thanks — you're on the list.", kind: "ok" });
     } catch (err) {
-      showToast(err.message);
+      setStatus({ text: err.message, kind: "err" });
     } finally {
       setBusy(false);
     }
@@ -49,7 +50,7 @@ export default function Footer({ onOpenInfo }) {
           {/* Brand */}
           <div className="md:col-span-1">
             <Coin size="md" />
-            <p className="metallic-text mt-4 font-brand text-base font-extrabold tracking-[0.2em]">
+            <p className="metallic-text wordmark mt-4 text-base tracking-[0.2em]">
               NORMALIZE
             </p>
             <p className="mt-3 text-[11px] leading-relaxed tracking-wide text-muted">
@@ -66,7 +67,8 @@ export default function Footer({ onOpenInfo }) {
                 {col.items.map(([key, label]) => (
                   <li key={key}>
                     <button onClick={() => onOpenInfo(key)}
-                            className="text-[11px] tracking-wide text-muted transition-colors hover:text-ink">
+                            className="flex min-h-11 items-center text-[11px] tracking-wide text-muted
+                                       transition-colors hover:text-ink">
                       {label}
                     </button>
                   </li>
@@ -91,21 +93,26 @@ export default function Footer({ onOpenInfo }) {
                 autoComplete="email"
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email"
-                className="border border-line bg-transparent px-3 py-2.5 text-xs text-ink
-                           focus:border-gold-dark focus:outline-none"
+                className="field text-xs"
               />
               <button type="submit" disabled={busy}
-                      className="bg-ink px-6 py-2.5 text-[10px] tracking-[0.16em] text-cream uppercase
+                      className="min-h-11 bg-ink px-6 text-[10px] tracking-[0.16em] text-cream uppercase
                                  transition-opacity hover:opacity-85 disabled:opacity-40">
                 {busy ? "…" : "Subscribe"}
               </button>
+              {status.text && (
+                <p role="status"
+                   className={`text-[10px] leading-relaxed ${status.kind === "err" ? "text-brown" : "text-muted"}`}>
+                  {status.text}
+                </p>
+              )}
             </form>
           </div>
         </div>
 
         <div className="mt-14 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 sm:flex-row">
           <p className="text-[10px] tracking-[0.14em] text-muted uppercase">
-            © {new Date().getFullYear()} Normalize · Made in India
+            © {new Date().getFullYear()} Normalize · Made in Chennai
           </p>
           <p className="text-[10px] tracking-[0.14em] text-muted uppercase">
             Payments secured by Razorpay

@@ -1,11 +1,17 @@
 /* Hotspot placement and the hand-drawn branch silhouettes that grow out of
    the coin, lifted from the original markup. Each branch is stroked with the
-   polished-to-burnished metallic gradient defined in LaunchCanvas. */
+   polished-to-burnished metallic gradient defined in LaunchCanvas.
+
+   x/y/nx/ny are the desktop layout: an anchor on the coin's surface and the
+   offset to its label. `angle` is the mobile one — below 768px the branches
+   splay outward from the coin's centre as a radial halo, never stacked over
+   it, and the component derives nx/ny from this bearing instead. */
 export const HOTSPOTS = [
   {
-    "key": "nav",
-    "label": "Collections",
-    "target": "shop",
+    "key": "launch",
+    "angle": -128,
+    "label": "The Launch",
+    "target": "spotlight",
     "x": "36%",
     "y": "30%",
     "nx": "-150px",
@@ -63,6 +69,7 @@ export const HOTSPOTS = [
   },
   {
     "key": "cart",
+    "angle": -18,
     "label": "Your bag",
     "target": "cart",
     "x": "66%",
@@ -118,8 +125,9 @@ export const HOTSPOTS = [
   },
   {
     "key": "story",
+    "angle": 118,
     "label": "Our story",
-    "target": "spotlight",
+    "target": "story",
     "x": "33%",
     "y": "72%",
     "nx": "-128px",

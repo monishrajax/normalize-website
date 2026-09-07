@@ -2,14 +2,31 @@ import * as THREE from "three";
 
 /* The macro coin, rendered for real rather than faked with CSS.
 
-   Ported from the original single-file build with one necessary change: that
-   code targeted three r128 and used `outputEncoding` / `THREE.sRGBEncoding`,
-   both of which were REMOVED in r152. On a modern three they are silently
-   undefined, which renders the gold washed-out and flat. The current
-   colour-space API (`outputColorSpace` / `SRGBColorSpace`) is used throughout. */
+   Two things here are load-bearing and easy to undo by accident:
+
+   1. ROTATION IS A Y-AXIS FLIP. The coin turns backside-to-frontside about its
+      vertical axis, showing its milled thickness as it passes profile. It is
+      never a Z-axis wheel spin — `coin.rotation.z` is pinned to 0 and nothing
+      is allowed to write to it.
+
+   2. THE ENVIRONMENT IS THE LIGHTING. Pure metal has no colour of its own; it
+      is only what it reflects. The gold arc behind the camera is deliberately
+      ±115°, because a flat face's reflection sweeps at TWICE the face's own
+      rotation angle — to keep the face lit across ±57° of flip you must light
+      double that window.
+
+   Colour-space note: this targets the modern three API (`outputColorSpace` /
+   `SRGBColorSpace`). The r128-era `outputEncoding` / `sRGBEncoding` were
+   removed in r152 and are silently undefined on a current three, which renders
+   the gold washed-out and flat. */
 
 const FACE_FRONT = "/assets/coin-front.webp";
 const FACE_BACK = "/assets/coin-back.webp";
+
+/* The coin plus a little air, in world units. Framing is solved from this so
+   the whole coin is visible on any aspect ratio from the first frame — there
+   is no zoom-in journey to hide a bad opening shot. */
+const FRAME_EXTENT = 2.75;
 
 export function createCoinScene(container, { isSmall = false } = {}) {
   let renderer;
@@ -20,7 +37,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
   }
 
   const canvas = renderer.domElement;
-  canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;";
+  canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;";
   container.appendChild(canvas);
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -31,8 +48,9 @@ export function createCoinScene(container, { isSmall = false } = {}) {
   renderer.toneMappingExposure = 1.35;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 30);
-  camera.position.set(0, 0, 3.1);
+  const FOV = 34;
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.01, 30);
+  camera.position.set(0, 0, 4.4);
 
   const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
   const hq = (t) => {
@@ -43,29 +61,71 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     return t;
   };
 
-  /* ---- Studio environment ----
-     Pure metal has no colour of its own — it is only what it reflects. Blazing
-     white softbox strips over near-black falloff force the gold to flash liquid
-     highlights against deep shadow, rather than the matte yellow a low-contrast
-     environment produces. */
-  scene.environment = (() => {
-    const c = document.createElement("canvas");
-    c.width = 1024; c.height = 512;
-    const x = c.getContext("2d");
-    const g = x.createLinearGradient(0, 0, 0, 512);
-    g.addColorStop(0, "#3a2f17"); g.addColorStop(0.3, "#141008");
-    g.addColorStop(0.55, "#050403"); g.addColorStop(0.82, "#241a0b");
-    g.addColorStop(1, "#0a0704");
-    x.fillStyle = g; x.fillRect(0, 0, 1024, 512);
+  /* ---- Studio environment, through PMREM ------------------------------------
+     A raw CanvasTexture as scene.environment is sampled without the roughness
+     convolution, so a rough metal reflects a hard-edged photograph of the
+     canvas. PMREMGenerator pre-filters it into the mip chain three actually
+     wants, which is what makes the clearcoat read as lacquer over metal rather
+     than a sticker.
 
+     Layout, in equirect u (three maps u = atan2(z, x) / 2π + 0.5):
+       u 0.50 → +X, camera's right
+       u 0.25 → −Z, straight ahead, BEHIND the coin
+       u 0.75 → +Z, behind the CAMERA — this is what a face reflects head-on
+     so the warm gold arc is centred on 0.75 and spans ±115°.               */
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+
+  const envSource = (() => {
+    const W = 2048, H = 1024;
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const x = c.getContext("2d");
+
+    // The void. Near-black, with the faintest warm lift off the floor so the
+    // coin's lower half is not pure dead shadow.
+    const g = x.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#07060a");
+    g.addColorStop(0.46, "#040305");
+    g.addColorStop(0.78, "#0d0a06");
+    g.addColorStop(1, "#171008");
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+
+    /* The gold arc. Centred behind the camera and 230° wide, drawn with a
+       horizontal falloff so its edges do not stamp a hard line across the
+       face as the coin flips through them. */
+    const arcCentre = 0.75 * W;
+    const arcHalf = (115 / 360) * W;
+    const arc = x.createLinearGradient(arcCentre - arcHalf, 0, arcCentre + arcHalf, 0);
+    arc.addColorStop(0, "rgba(120, 84, 26, 0)");
+    arc.addColorStop(0.18, "rgba(196, 146, 56, 0.55)");
+    arc.addColorStop(0.5, "rgba(255, 226, 158, 0.92)");
+    arc.addColorStop(0.82, "rgba(196, 146, 56, 0.55)");
+    arc.addColorStop(1, "rgba(120, 84, 26, 0)");
+    x.save();
+    x.globalCompositeOperation = "screen";
+    x.fillStyle = arc;
+    x.fillRect(arcCentre - arcHalf, H * 0.16, arcHalf * 2, H * 0.56);
+    // The arc wraps past u=1; draw the overflow again at the left edge.
+    x.translate(-W, 0);
+    x.fillRect(arcCentre - arcHalf, H * 0.16, arcHalf * 2, H * 0.56);
+    x.restore();
+
+    /* White softboxes. These are the hard speculars — the things that streak
+       across the gold as it turns. Blur is what makes them read as fabric
+       diffusers rather than rectangles. */
     const box = (px, py, pw, ph, colour, blur) => {
-      x.save(); x.filter = `blur(${blur}px)`;
-      x.fillStyle = colour; x.fillRect(px, py, pw, ph); x.restore();
+      x.save();
+      x.globalCompositeOperation = "screen";
+      x.filter = `blur(${blur}px)`;
+      x.fillStyle = colour;
+      x.fillRect(px, py, pw, ph);
+      x.restore();
     };
-    box(0, 120, 1024, 90, "#fffaf0", 26);      // main horizontal sweep
-    box(120, 40, 260, 150, "#fff8e6", 34);     // upper-left softbox
-    box(700, 250, 240, 140, "#ffe9bd", 40);    // warm fill, lower right
-    box(430, 330, 180, 80, "#c9a961", 44);     // floor bounce
+    box(W * 0.60, H * 0.06, W * 0.30, H * 0.20, "#ffffff", 46);   // key, upper
+    box(W * 0.10, H * 0.20, W * 0.16, H * 0.34, "#fff6e4", 54);   // left rake
+    box(W * 0.40, H * 0.30, W * 0.10, H * 0.24, "#ffffff", 40);   // narrow kicker
+    box(W * 0.72, H * 0.62, W * 0.22, H * 0.14, "#ffe4b0", 62);   // warm floor bounce
 
     const t = new THREE.CanvasTexture(c);
     t.mapping = THREE.EquirectangularReflectionMapping;
@@ -73,13 +133,20 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     return t;
   })();
 
-  /* ---- Lights ---- */
-  const keyLight = new THREE.DirectionalLight(0xfff6dd, 1.1);
+  const envRT = pmrem.fromEquirectangular(envSource);
+  scene.environment = envRT.texture;
+  envSource.dispose();
+  pmrem.dispose();
+
+  /* ---- Lights ----
+     The environment does the heavy lifting; these only shape it. */
+  const keyLight = new THREE.DirectionalLight(0xfff6dd, 1.05);
   keyLight.position.set(1.6, 1.8, 2.4);
   scene.add(keyLight);
-  scene.add(new THREE.AmbientLight(0xfdf6e6, 0.34));
-  // Grazing rake, almost parallel to the face — catches the milled ridges.
-  const rakeLight = new THREE.DirectionalLight(0xffe9b8, 0.5);
+  scene.add(new THREE.AmbientLight(0xfdf6e6, 0.22));
+  // Grazing rake, almost parallel to the face — catches the milled ridges and
+  // keeps the rim lit even when the faces are edge-on and dark.
+  const rakeLight = new THREE.DirectionalLight(0xffe9b8, 0.62);
   rakeLight.position.set(-2.6, 0.5, 0.35);
   scene.add(rakeLight);
 
@@ -148,9 +215,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     return t;
   })();
 
-  /* ---- Face artwork, composited onto solid metal so the caps read as gold.
-     These are real image files now; the original had to scrape the base64 back
-     out of the stylesheet to avoid duplicating ~900KB. ---- */
+  /* ---- Face artwork, composited onto solid metal so the caps read as gold. */
   const FACE = isSmall ? 2048 : 4096;
   function loadFace(url) {
     return new Promise((resolve, reject) => {
@@ -193,10 +258,19 @@ export function createCoinScene(container, { isSmall = false } = {}) {
   const coin = new THREE.Group();
   scene.add(coin);
 
-  const edgeMaterial = new THREE.MeshStandardMaterial({
-    color: GOLD, metalness: 1, roughness: 0.34,
+  /* Base env intensities, before the rotation curve is applied each frame. */
+  const EDGE_ENV_BASE = 1.6;
+  const FACE_ENV_BASE = 2.1;
+
+  const edgeMaterial = new THREE.MeshPhysicalMaterial({
+    color: GOLD,
+    metalness: 1,
+    roughness: 0.22,
     bumpMap: rimBump, bumpScale: 0.012,
     roughnessMap: rimRough,
+    clearcoat: 0.55,
+    clearcoatRoughness: 0.28,
+    envMapIntensity: EDGE_ENV_BASE,
   });
   rimBump.repeat.set(1, 1);
   rimRough.repeat.set(1, 1);
@@ -214,16 +288,22 @@ export function createCoinScene(container, { isSmall = false } = {}) {
   Promise.all([loadFace(FACE_FRONT), loadFace(FACE_BACK)])
     .then(([front, back]) => {
       [front, back].forEach((tex, i) => {
-        const mat = new THREE.MeshStandardMaterial({
+        const mat = new THREE.MeshPhysicalMaterial({
           map: tex.map,
           metalness: 1,
-          roughness: 0.3,
+          // The brief's window: .18–.22. Low enough to throw a real specular,
+          // high enough that the brushed grain still reads.
+          roughness: 0.19,
           roughnessMap: grainRough,
           normalMap: brushNormal,
           normalScale: new THREE.Vector2(0.35, 0.35),
           bumpMap: tex.bump,
           bumpScale: 0.006,
-          envMapIntensity: 1.25,
+          // Lacquer over struck metal — this is what separates the highlight
+          // from the body colour instead of blowing them out together.
+          clearcoat: 0.72,
+          clearcoatRoughness: 0.16,
+          envMapIntensity: FACE_ENV_BASE,
         });
         const mesh = new THREE.Mesh(faceGeo, mat);
         // Sit each face just proud of its cap so it never z-fights the body.
@@ -235,15 +315,57 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     })
     .catch(() => { /* artwork missing — the coin still renders as blank gold */ });
 
-  /* ---- Idle sheen + pointer tracking ---- */
+  /* ---- Rotation state -------------------------------------------------------
+     `flip` is the Y-axis angle and the only thing that turns the coin. `tiltX`
+     is a small pointer-follow lean, kept off the Y axis so it can never be
+     mistaken for the flip. Z is untouched, always, by anything.              */
+  const spin = { flip: 0, vel: 0, dragging: false, lastX: 0, lastT: 0, idle: 0.28 };
+  const tilt = { x: 0, targetX: 0 };
   const sheen = { t: 0, lastUser: 0 };
-  const tilt = { x: 0, y: 0, targetX: 0, targetY: 0 };
 
   function setPointer(nx, ny) {
     // nx, ny are -1..1 across the stage.
-    tilt.targetY = nx * 0.22;
-    tilt.targetX = ny * 0.16;
+    tilt.targetX = ny * 0.15;
     keyLight.position.set(1.6 + nx * 1.6, 1.8 - ny * 1.4, 2.4);
+    sheen.lastUser = performance.now();
+  }
+
+  /* ---- Drag to flip, from the very first frame ---- */
+  function onPointerDown(e) {
+    spin.dragging = true;
+    spin.lastX = e.clientX;
+    spin.lastT = performance.now();
+    spin.vel = 0;
+    canvas.style.cursor = "grabbing";
+    canvas.setPointerCapture?.(e.pointerId);
+  }
+  function onPointerMove(e) {
+    if (!spin.dragging) return;
+    const now = performance.now();
+    const dx = e.clientX - spin.lastX;
+    const dt = Math.max(8, now - spin.lastT);
+    spin.flip += dx * 0.011;
+    // Remember the throw so releasing mid-drag carries momentum.
+    spin.vel = (dx * 0.011) / (dt / 1000);
+    spin.lastX = e.clientX;
+    spin.lastT = now;
+    sheen.lastUser = now;
+  }
+  function onPointerUp(e) {
+    if (!spin.dragging) return;
+    spin.dragging = false;
+    canvas.style.cursor = "grab";
+    canvas.releasePointerCapture?.(e.pointerId);
+  }
+  canvas.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerUp);
+
+  /* Scroll velocity feeds the flip, so the toss into the header carries real
+     spin rather than a canned tumble. */
+  function addSpin(v) {
+    spin.vel += v;
     sheen.lastUser = performance.now();
   }
 
@@ -251,26 +373,17 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     const w = container.clientWidth || 1;
     const h = container.clientHeight || 1;
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    const aspect = w / h;
+    camera.aspect = aspect;
+    /* Solve the distance so the whole coin fits on BOTH axes. On a narrow
+       phone the limit is width, on a wide desktop it is height; framing from
+       whichever is tighter is what lets the coin open full-size with no
+       zoom-in journey to cover a bad first frame. */
+    const visibleH = FRAME_EXTENT * Math.max(1, 1 / aspect);
+    camera.position.z = visibleH / (2 * Math.tan((FOV * Math.PI) / 360));
     camera.updateProjectionMatrix();
   }
   resize();
-
-  /* Frame the opening shot before the first render. ScrollTrigger only reports
-     progress once the user scrolls, so without this the coin sits at the
-     constructor's distance and overflows the viewport as a flat gold field. */
-  function setProgress(p) {
-    const t = Math.min(1, Math.max(0, p));
-    // Ease-out so most of the travel happens early and the shot settles.
-    const eased = 1 - Math.pow(1 - t, 2);
-    camera.position.z = 1.7 + eased * 3.0;      // 1.04 -> 2.87 visible height
-    camera.position.y = (1 - eased) * 0.34;     // drift up off the crest
-    // A residual tilt at the start reads as a raking macro shot rather than a
-    // flat wall; it levels out as the camera pulls back.
-    coin.rotation.z = (1 - eased) * 0.16;
-    camera.lookAt(0, 0, 0);
-  }
-  setProgress(0);
 
   let frame = 0;
   let running = true;
@@ -278,7 +391,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
 
   function tick() {
     if (!running) return;
-    const dt = clock.getDelta();
+    const dt = Math.min(0.05, clock.getDelta());
 
     // While the pointer is quiet, sweep the key light on its own so the coin
     // never looks frozen.
@@ -287,11 +400,31 @@ export function createCoinScene(container, { isSmall = false } = {}) {
       keyLight.position.set(Math.sin(sheen.t) * 2.2, 1.8, 2.4);
     }
 
-    // Ease toward the target so pointer movement feels weighted, not twitchy.
+    if (!spin.dragging) {
+      // Thrown momentum decays; underneath it a slow idle flip keeps turning,
+      // which is what shows off the lighting curve below without the visitor
+      // having to touch anything.
+      spin.vel *= Math.pow(0.12, dt);
+      if (Math.abs(spin.vel) < 0.02) spin.vel = 0;
+      spin.flip += (spin.vel + spin.idle) * dt;
+    }
+
     tilt.x += (tilt.targetX - tilt.x) * Math.min(1, dt * 6);
-    tilt.y += (tilt.targetY - tilt.y) * Math.min(1, dt * 6);
+
+    coin.rotation.y = spin.flip;
     coin.rotation.x = tilt.x;
-    coin.rotation.y = tilt.y;
+    coin.rotation.z = 0;   // pinned. The coin flips on Y, never Z.
+
+    /* ---- Lighting linked to rotation ----
+       Blinding flash face-on, deep shadow at profile, and the rim — which is
+       lit by the rake rather than the arc — stays readable throughout.
+       The cube of |cos| is what makes the falloff snap instead of fade. */
+    const facing = Math.abs(Math.cos(spin.flip));
+    const curve = 0.14 + 1.45 * facing * facing * facing;
+    for (const m of faceMeshes) m.material.envMapIntensity = FACE_ENV_BASE * curve;
+    // The rim reads best when it is NOT following the faces — it should hold
+    // its light while they go dark, so it gets the inverse weighting.
+    edgeMaterial.envMapIntensity = EDGE_ENV_BASE * (0.55 + 0.75 * (1 - facing));
 
     renderer.render(scene, camera);
     frame = requestAnimationFrame(tick);
@@ -300,17 +433,16 @@ export function createCoinScene(container, { isSmall = false } = {}) {
 
   return {
     setPointer,
+    addSpin,
     resize,
-    /* Scroll progress 0..1 drives the macro camera: it starts close enough that
-       the struck relief fills the frame, then pulls back to reveal the whole
-       coin. The near distance is deliberately not extreme — at the FOV above
-       the visible height is 0.61 * z, so anything under ~1.6 frames a patch of
-       bare metal with no engraving in it at all. */
-    setProgress,
     dispose() {
       running = false;
       cancelAnimationFrame(frame);
-      scene.environment?.dispose();
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+      envRT.dispose();
       faceGeo.dispose();
       body.geometry.dispose();
       edgeMaterial.dispose();
