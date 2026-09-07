@@ -303,74 +303,113 @@ checkout, Shiprocket shipment and AWB, live tracking, Formspree contact.
 
 ---
 
-# Spec vs. built
+# As built — where each rule lives
 
-The brief above describes the target. The code does not match it yet. Verified
-gaps, as of the last audit:
+The brief above is implemented. This maps each standing rule to the code that
+enforces it, so a future change can be checked against the right file rather
+than rediscovered.
 
-## Standing rules currently violated
-
-| Rule | Status |
+| Rule | Where it is enforced |
 |---|---|
-| 4 — coin flips on Y, never Z | **Broken.** `coinScene.js:270` sets `coin.rotation.z = (1 - eased) * 0.16`. There is also no Y-flip at all: `tick()` only applies a small pointer-follow tilt (±0.22 rad) to `rotation.x/y`. |
-| 5 — badge updates after the animation | **Not built.** No Genie animation exists; the badge reads `count` straight from `CartContext` and updates instantly. |
-| 6 — no toasts | **Broken.** `ToastContext.jsx` exists and is called by `Spotlight.jsx` and `ProductModal.jsx` on add-to-bag. |
-| 7 — typewriter except wordmark and branch labels | **Partly broken.** Branch labels use `font-display` (Cormorant), not Archivo Expanded. |
-| 2 — full-page canvases, never a modal | **Mostly met.** Search, Bag, Wishlist, Product and the reading pages all render through `Panel.jsx`, which is a real `fixed inset-0` canvas. `CheckoutModal.jsx` is the exception — a `max-w-2xl` card floating on `bg-ink/70` with a backdrop blur. |
+| 1 — centred header logo | `Header.jsx`; the coin sits in `#header-coin-slot`, which is also the dock the launch coin flies into |
+| 2 — full-page canvases, never a drawer or popup | `Panel.jsx` is the only chassis. Search, Products, Bag, Wishlist, Product, Checkout and all six reading pages go through it. There are no modals left — the old `*Modal.jsx` files were renamed `*Panel.jsx` so the filenames cannot re-suggest one |
+| 3 — gold is an accent, never a fill | `.metallic-text` is restricted to the wordmark and the coin. The single flat gold button is the hero CTA in `Hero.jsx` |
+| 4 — the coin flips on Y, never Z | `coinScene.js`: `spin.flip` drives `rotation.y`; `rotation.z = 0` is written explicitly every frame |
+| 5 — badge updates after the animation | `CartContext.jsx` keeps `count` (truth) and `badge` (displayed). `badge` is held while `flightsRef` is non-zero and synced in the flight's `finally` |
+| 6 — no toasts | `ToastContext` is deleted. Forms answer in place (`Footer.jsx`, `InfoForms.jsx`) |
+| 7 — typewriter except the wordmark and branch labels | `.wordmark` and `.branch-label` in `styles/index.css` are the only two users of `--font-brand` |
+| 8 — OFL or system fonts | Archivo (OFL), Cormorant Garamond, Courier Prime |
 
-Also against the brief: "no auto-opening cart" — `Spotlight.handleAdd` and
-`ProductModal.handleAdd` both call `onOpenCart()` right after adding.
+## Fonts — the trap that was here before
+
+There is no Google Fonts family called "Archivo Expanded". The expanded width is
+a **variable `wdth` axis** on Archivo. Requesting it by name returns HTTP 200
+with the family silently dropped, which is why the wordmark used to render in
+Helvetica. `client/index.html` requests
+`family=Archivo:wdth,wght@62.5..125,400..800`, and `font-stretch: 125%` on
+`.wordmark` / `.branch-label` is what actually selects Expanded. Do not "tidy"
+that stretch away.
 
 ## The coin
 
-- **The zoom-in journey is still there.** `setProgress` dollies the camera from
-  `z = 1.7` to `z = 4.7` across the scroll. The brief calls for opening at the
-  full coin with no zoom.
-- **No rotation-linked lighting.** `envMapIntensity` is a static `1.25`; the
-  `0.14 + 1.45 × |cos(rotY)|³` curve is not implemented.
-- **Material is off-spec.** Roughness is `0.3`/`0.34` against a target of
-  .18–.22, and there is no `clearcoat`.
-- **The coin does not toss into the header.** The header renders a separate CSS
-  `<Coin>` component; there is no hand-off from the WebGL scene.
-- **Branches fade, they do not grow.** Hotspots animate with `opacity` and a
-  staggered `transitionDelay` — no stroke-dash growth.
-- **Labels differ.** Built: Collections / Your bag / Our story. Brief: The Launch
-  / Your bag / Our story. The bag branch carries no live item count.
-- **No mobile radial halo.** `hotspots.js` uses fixed percentage positions; the
-  `isSmall` flag only shortens the ScrollTrigger distance.
+- Opens full-size and face-on, draggable from the first frame. The camera never
+  dollies — `resize()` solves the distance so the whole coin fits on both axes.
+- `frameExtentFor(small)` in `LaunchCanvas.jsx` is the single source of truth for
+  how much air surrounds the coin. It is passed into `createCoinScene` and used
+  to place the branch anchors and to size the header dock, so the three can
+  never drift apart. Mobile uses a wider extent — a smaller coin — because the
+  halo's labels need room beside it on a 375px screen.
+- Environment is built through `PMREMGenerator`, not assigned raw. A raw
+  `CanvasTexture` is sampled without roughness convolution and the clearcoat
+  reads as a sticker.
+- The gold arc is centred at equirect `u = 0.75` (behind the camera) and spans
+  ±115°, because a flat face's reflection sweeps at twice its rotation angle.
+- `envMapIntensity` follows `0.14 + 1.45·|cos(rotY)|³` on the faces; the rim gets
+  the inverse weighting so it stays lit while the faces go dark at profile.
+- **The dock must be measured against the stage's PINNED geometry.** While
+  pinned, ScrollTrigger fixes the stage to the viewport top, so its centre is
+  `(offsetWidth/2, offsetHeight/2)`. Measuring `getBoundingClientRect()` at setup
+  reads it where it sits in normal flow and the coin overshoots the header.
 
-## Typography
+## The genie
 
-**`Archivo Expanded` never loads.** It is not a Google Fonts family — Archivo's
-expanded width is a variable `wdth` axis. The request in `client/index.html`
-returns 200 but silently drops it; only Cormorant Garamond and Courier Prime come
-back. The wordmark currently falls through `--font-brand` to Jost (also not
-loaded) and lands on Helvetica Neue / Arial.
+`lib/genie.js` — plain DOM plus the Web Animations API, deliberately not
+React-shaped, because the badge has to wait on `animation.finished`. The flight
+is a quadratic arc with a lifted control point; the horizontal pinch runs ahead
+of the vertical collapse. `CartContext.addToBag` adds the line immediately (so
+the bag's contents are right if opened mid-flight) and only the badge waits.
 
-Fixing this without breaking rule 8 means either loading Archivo's variable font
-and setting `font-stretch`, or choosing a different OFL expanded face.
+## Branch placement
 
-## Layout and motion
+Anchors sit on the coin's measured rim and the silhouette is pinned by its left
+edge and rotated to the bearing, so a branch grows out of the metal rather than
+floating near it. Bearings are hand-set and uneven; `angleSmall` in
+`hotspots.js` is the sub-768px variant. A `useLayoutEffect` in `LaunchCanvas`
+measures each label after layout and nudges it back inside the viewport — that
+clamp is what keeps "Your bag (12)" on screen without per-breakpoint tuning.
 
-- **Spotlight is light, not a dark full-bleed stage** — `bg-cream-dark/40` inside
-  the normal container. None of the grand entrance is built: no floor wipe, no
-  deep-zoom settle, no word-by-word title, no Dawn/Dusk mood animations.
-- **Panel reveals are opacity fades**, not liquid clip-paths.
-- **Header left is a category nav** (All / Bags / Apparel / Caps / Accessories),
-  hidden entirely in launch mode — so on desktop the left slot is empty right
-  now. The brief wants a single PRODUCTS link that teleports to its own canvas.
-- **The "typed document" chassis is half-built.** `InfoModal` renders eyebrow,
-  title and lede correctly, but there is no gold rule, and the `doc-list`,
-  `doc-spec` and `doc-aside` classes used throughout `infoContent.js` have **zero
-  styling** — so the numbered margin indices and hairline dividers do not render.
-  `prose-normalize` is likewise unstyled; the real styling is inline arbitrary
-  variants on the wrapper.
-- **Edition accent colours are missing** from the `@theme` block — no `#b08d57`
-  or `#6d7c9a` anywhere.
+## Judgement calls worth knowing
 
-## What already matches
+- **No coin in the hero.** The brief's hero is eyebrow, headline, one line of
+  positioning, one gold button. The coin's home is the launch canvas above it
+  and the header it docks into; a third copy in between read as repetition.
+- **`MobileMenu` is gone.** The brief wants categories in a full-screen panel;
+  the Products canvas already is one, so a second panel duplicating it was
+  removed rather than kept in parallel.
+- **Desktop branch anchors are now radial too.** The old hand-placed percentages
+  were tuned for the previous macro framing and put labels on top of the coin.
+  Bearings and reach still differ per branch and per breakpoint, so the
+  arrangement stays hand-placed rather than an evenly spaced ring.
 
-Scroll order, launch mode behaviour, PREBOOK copy, the centred header wordmark,
-the full-screen mobile category panel, `prefers-reduced-motion` handling, the
-WebGL→CSS coin fallback, Formspree contact, and the entire server-side pricing
-model.
+## Verified behaviour
+
+Checked in a real browser against the running stack, not inferred:
+
+- The coin lands exactly on the header slot centre, with a visible arc mid-flight
+- Add to bag: badge reads (0) 120 ms into the flight and (1) once it lands; the
+  bag never opens itself; storage holds only `{productId, variant, qty}`
+- Products canvas: 12 cards, **zero** native `<select>` elements, body scroll
+  locked while open and restored on close
+- Reading pages: gold rule 54×1px `#8a6a1c`, numbered margin indices via
+  `counter(doc, decimal-leading-zero)`, 1px `#ddd2ba` dividers, and form fields
+  with `border-bottom: 1px` and no other borders
+- Mobile 375px: every header control 44×44, no horizontal overflow, all three
+  branch labels on screen and clear of the coin
+- Header wordmark computes to `Archivo … / font-stretch 125%`; the hero
+  wordmark to `Cormorant Garamond`
+
+Two notes on verifying this in the Browser pane: it fires no scroll events for
+scripted `window.scrollTo`, so ScrollTrigger has to be stepped with
+`ScrollTrigger.update()`; and it freezes the document timeline whenever the pane
+is hidden, so CSS transitions stall mid-flight. Neither is a fault in the site.
+
+## Still open
+
+Both predate this work and are unchanged — the server was not touched.
+
+**`start()` runs on import — `server/src/index.js:119`.** No guard, so importing
+`createApp` from `api/index.js` also fires `mongoose.connect()` and
+`app.listen(PORT)` on a Vercel cold start.
+
+**`npm test` needs credentials.** `server/test/e2e.mjs` requires real `rzp_test_*`
+keys in `server/.env` and exits early without them.
