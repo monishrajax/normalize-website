@@ -379,7 +379,9 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
     spin.vel = 0;
     spin.target = null;          // a grab cancels an in-flight flip
     canvas.style.cursor = "grabbing";
-    canvas.setPointerCapture?.(e.pointerId);
+    // Best-effort: capture throws if the id is not an active pointer, and
+    // losing it only costs us tracking outside the canvas — never the gesture.
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* no capture */ }
   }
   function onPointerMove(e) {
     if (!spin.dragging) return;
@@ -398,9 +400,11 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
     if (!spin.dragging) return;
     spin.dragging = false;
     canvas.style.cursor = "grab";
-    canvas.releasePointerCapture?.(e.pointerId);
-    // A press that went nowhere is a tap: show the other face.
+    // A press that went nowhere is a tap: show the other face. This is decided
+    // BEFORE releasing capture, because releasePointerCapture throws when the
+    // pointer was never captured — and a throw here would swallow the tap.
     if (spin.travel < 5 && performance.now() - spin.downT < 350) flipOver();
+    try { canvas.releasePointerCapture(e.pointerId); } catch { /* never held */ }
   }
 
   /* Keyboard: the arrows nudge it round, Enter/Space turns it over. */
@@ -417,7 +421,6 @@ export function createCoinScene(container, { isSmall = false, frameExtent = DEFA
   }
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("keydown", onKeyDown);
-  canvas.__spin = spin; // TEMP PROBE
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
   window.addEventListener("pointercancel", onPointerUp);
