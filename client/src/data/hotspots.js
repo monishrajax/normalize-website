@@ -2,14 +2,20 @@
    the coin, lifted from the original markup. Each branch is stroked with the
    polished-to-burnished metallic gradient defined in LaunchCanvas.
 
-   x/y/nx/ny are the desktop layout: an anchor on the coin's surface and the
-   offset to its label. `angle` is the mobile one — below 768px the branches
-   splay outward from the coin's centre as a radial halo, never stacked over
-   it, and the component derives nx/ny from this bearing instead. */
+   Each branch is placed by BEARING from the coin's centre, and the reach along
+   it is measured from the coin's rim at runtime — see LaunchCanvas. The
+   bearings are deliberately uneven; this is a hand-placed arrangement, not a
+   ring of evenly spaced pins.
+
+   `angleSmall` is the sub-768px variant. The mobile coin has far less room
+   beside it, so the near-horizontal branch is lifted clear of the coin's widest
+   band rather than running its label across the artwork. x/y/nx/ny are the
+   original hand-placed offsets, kept for reference. */
 export const HOTSPOTS = [
   {
     "key": "launch",
     "angle": -132,
+    "angleSmall": -118,
     "label": "The Launch",
     "target": "spotlight",
     "x": "36%",
@@ -70,6 +76,7 @@ export const HOTSPOTS = [
   {
     "key": "cart",
     "angle": -18,
+    "angleSmall": -52,
     "label": "Your bag",
     "target": "cart",
     "x": "66%",
@@ -126,6 +133,7 @@ export const HOTSPOTS = [
   {
     "key": "story",
     "angle": 152,
+    "angleSmall": 128,
     "label": "Our story",
     "target": "story",
     "x": "33%",

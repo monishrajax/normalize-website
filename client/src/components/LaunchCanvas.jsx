@@ -258,7 +258,8 @@ export default function LaunchCanvas({ onNavigate }) {
   /* Each branch keeps its own hand-set bearing — they are deliberately not
      evenly spaced — but the distance along it is measured from the coin. */
   const placement = (h) => {
-    const rad = (h.angle * Math.PI) / 180;
+    const bearing = (isSmall && h.angleSmall != null) ? h.angleSmall : h.angle;
+    const rad = (bearing * Math.PI) / 180;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
     return {
@@ -272,7 +273,7 @@ export default function LaunchCanvas({ onNavigate }) {
       ny: `${sin * halo.out}px`,
       // The silhouettes are drawn left-to-right in their own box; rotating to
       // the bearing is what makes them actually grow toward the label.
-      angle: h.angle,
+      angle: bearing,
       // Labels on the left half are pushed further so they end, not begin, at
       // the branch tip.
       flip: cos < 0,
