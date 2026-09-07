@@ -56,6 +56,16 @@ Product prices, promo rules and shipping rules have exactly one definition. The 
 build kept a second copy in the page and the two had already drifted; that is the bug
 this design exists to prevent.
 
+**The same rule covers product COPY, not just money.** No component may state a
+fact about the thing being sold — material, colour, construction. The Spotlight
+carried hand-written bullets and a per-edition line that had drifted into being
+simply wrong: it described an "ecru body" when the Butterfly Tote's body is
+indigo jute, and claimed ecru cotton handles for both editions when only Dawn
+has them (Dusk's are blue-and-white striped — visible in
+`client/public/assets/tote-dusk.webp`). It now renders `product.details`
+straight from the catalogue, and the only list left on it is brand-level
+(returns, batches, Chennai) with nothing product-specific to drift.
+
 ## Payment flow (Razorpay)
 
 1. `POST /api/orders` — prices the cart, opens a Razorpay order with
