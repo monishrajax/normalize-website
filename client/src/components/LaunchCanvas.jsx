@@ -12,6 +12,14 @@ import Coin from "./Coin";
 
    three.js and gsap are imported dynamically so they stay out of the main
    bundle — a visitor who never scrolls past the hero never downloads them. */
+/* How much air the scene frames around the coin, in world units — the coin is
+   2 units across, so its on-screen diameter is COIN_RATIO of the stage's
+   tighter axis. This is the single source of truth: it is handed to
+   createCoinScene, and used here to sit the branch anchors on the rim and to
+   size the coin's landing in the header. */
+const FRAME_EXTENT = 3.6;
+const COIN_RATIO = 2 / FRAME_EXTENT;
+
 export default function LaunchCanvas({ onNavigate }) {
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
@@ -45,9 +53,8 @@ export default function LaunchCanvas({ onNavigate }) {
      breakpoints are radial for that reason; what changes below 768px is the
      reach — a tighter halo around a smaller coin.
 
-     COIN_RATIO mirrors `coinDiameterRatio` in lib/coinScene.js: the scene
-     frames a 2-unit coin inside FRAME_EXTENT units, so the coin's diameter is
-     that fraction of the stage's tighter axis. */
+     COIN_RATIO is the module constant above — the same number the scene is
+     built with, so the anchors cannot drift off the rim. */
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
     const onChange = () => setIsSmall(mq.matches);
@@ -56,7 +63,6 @@ export default function LaunchCanvas({ onNavigate }) {
     const measure = () => {
       const stage = stageRef.current;
       if (!stage) return;
-      const COIN_RATIO = 2 / 3.6;
       const small = mq.matches;
       const min = Math.min(stage.clientWidth, stage.clientHeight);
       const coinRadius = (min * COIN_RATIO) / 2;
@@ -105,7 +111,7 @@ export default function LaunchCanvas({ onNavigate }) {
       gsap.registerPlugin(ScrollTrigger);
 
       const small = window.matchMedia("(max-width: 768px)").matches;
-      const scene = createCoinScene(coinLayer, { isSmall: small });
+      const scene = createCoinScene(coinLayer, { isSmall: small, frameExtent: FRAME_EXTENT });
       if (!scene) {                      // no WebGL — the CSS coin stands in
         setMode("fallback");
         setGrown(true);
@@ -118,26 +124,35 @@ export default function LaunchCanvas({ onNavigate }) {
       requestAnimationFrame(() => requestAnimationFrame(() => setGrown(true)));
 
       /* ---- The toss into the header ----
-         Measured, not hardcoded: the dock is wherever the header's coin slot
-         actually is, so it stays correct across breakpoints. */
+         Measured, not hardcoded, so the dock is wherever the header's coin slot
+         actually is at any breakpoint.
+
+         It must be measured against the stage's PINNED geometry. While pinned,
+         ScrollTrigger fixes the stage to the top of the viewport, so its centre
+         is (offsetWidth/2, offsetHeight/2) in viewport coordinates. Reading the
+         stage's rect at setup instead measures it where it sits in normal flow —
+         a hundred-odd pixels lower — and the coin overshoots the header and
+         flies off the top of the screen. */
       const dockTarget = () => {
         const slot = document.getElementById("header-coin-slot");
-        const stageBox = stage.getBoundingClientRect();
-        if (!slot || !slot.getBoundingClientRect().width) {
-          // Below sm: the slot is hidden. Aim at where the wordmark sits.
-          return { dx: 0, dy: -stageBox.height / 2 + 28, scale: 0.12 };
+        const sw = stage.offsetWidth;
+        const sh = stage.offsetHeight;
+        const slotBox = slot?.getBoundingClientRect();
+        if (!slotBox || !slotBox.width) {
+          // Below sm the slot is hidden; aim at the wordmark instead.
+          return { dx: 0, dy: -sh / 2 + 34, scale: 0.1 };
         }
-        const slotBox = slot.getBoundingClientRect();
-        const min = Math.min(stageBox.width, stageBox.height);
-        const coinDiameter = min * (2 / 2.75);
         return {
-          dx: (slotBox.left + slotBox.width / 2) - (stageBox.left + stageBox.width / 2),
-          dy: (slotBox.top + slotBox.height / 2) - (stageBox.top + stageBox.height / 2),
-          scale: slotBox.width / coinDiameter,
+          dx: (slotBox.left + slotBox.width / 2) - sw / 2,
+          dy: (slotBox.top + slotBox.height / 2) - sh / 2,
+          scale: slotBox.width / (Math.min(sw, sh) * COIN_RATIO),
         };
       };
 
-      let dock = dockTarget();
+      /* Re-measured each update rather than cached: the header is sticky and the
+         announcement bar scrolls out from above it during this very pin, so the
+         slot genuinely moves while the toss is in flight. Two rect reads a frame
+         is nothing beside the WebGL render they sit next to. */
 
       const trigger = ScrollTrigger.create({
         trigger: section,
@@ -147,9 +162,9 @@ export default function LaunchCanvas({ onNavigate }) {
         pin: stage,
         anticipatePin: 1,
         invalidateOnRefresh: true,
-        onRefresh: () => { dock = dockTarget(); },
         onUpdate: (self) => {
           const p = self.progress;
+          const dock = dockTarget();
 
           /* Arc rather than slide: the coin is thrown UP first and only then
              carried to the dock, so the vertical component leads the
@@ -179,7 +194,7 @@ export default function LaunchCanvas({ onNavigate }) {
         },
       });
 
-      const onResize = () => { scene.resize(); dock = dockTarget(); };
+      const onResize = () => scene.resize();
       window.addEventListener("resize", onResize);
 
       const onPointerMove = (e) => {

@@ -23,12 +23,17 @@ import * as THREE from "three";
 const FACE_FRONT = "/assets/coin-front.webp";
 const FACE_BACK = "/assets/coin-back.webp";
 
-/* The coin plus a little air, in world units. Framing is solved from this so
-   the whole coin is visible on any aspect ratio from the first frame — there
-   is no zoom-in journey to hide a bad opening shot. */
-const FRAME_EXTENT = 3.6;
+/* The coin plus air, in world units: the framing is solved from this so the
+   whole coin is visible on any aspect ratio from the first frame — there is no
+   zoom-in journey to hide a bad opening shot, and the margin gives the branches
+   dark ground to grow into.
 
-export function createCoinScene(container, { isSmall = false } = {}) {
+   LaunchCanvas needs the same number to place the branch anchors on the rim and
+   to size the header dock, so it owns the value and passes it in. Exporting it
+   instead would drag three.js into the main bundle. */
+const DEFAULT_FRAME_EXTENT = 3.6;
+
+export function createCoinScene(container, { isSmall = false, frameExtent = DEFAULT_FRAME_EXTENT } = {}) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
@@ -381,7 +386,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
        phone the limit is width, on a wide desktop it is height; framing from
        whichever is tighter is what lets the coin open full-size with no
        zoom-in journey to cover a bad first frame. */
-    const visibleH = FRAME_EXTENT * Math.max(1, 1 / aspect);
+    const visibleH = frameExtent * Math.max(1, 1 / aspect);
     camera.position.z = visibleH / (2 * Math.tan((FOV * Math.PI) / 360));
     camera.updateProjectionMatrix();
   }
@@ -437,9 +442,8 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     setPointer,
     addSpin,
     resize,
-    /* The coin's on-screen diameter as a fraction of the stage's tighter axis.
-       LaunchCanvas needs it to sit the branch anchors on the rim. */
-    coinDiameterRatio: 2 / FRAME_EXTENT,
+    /* The coin's on-screen diameter as a fraction of the stage's tighter axis. */
+    coinDiameterRatio: 2 / frameExtent,
     dispose() {
       running = false;
       cancelAnimationFrame(frame);
