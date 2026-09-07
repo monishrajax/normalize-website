@@ -45,8 +45,7 @@ export default function SearchPanel({ open, onClose, onSelect }) {
         onChange={(e) => setTerm(e.target.value)}
         placeholder="What are you looking for?"
         autoComplete="off"
-        className="w-full border-b border-line bg-transparent pb-4 font-display text-3xl
-                   text-ink placeholder:text-muted/60 focus:border-gold-dark focus:outline-none md:text-4xl"
+        className="field pb-4 font-display text-3xl md:text-4xl"
       />
 
       <div className="mt-10 space-y-1">

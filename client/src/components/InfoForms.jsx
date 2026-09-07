@@ -22,8 +22,8 @@ async function postToFormspree(payload) {
   return res.json().catch(() => ({}));
 }
 
-const inputCls =
-  "w-full border border-line bg-transparent px-3 py-2.5 text-sm text-ink focus:border-gold-dark focus:outline-none";
+/* Forms are underline fields, never boxes — see .field in styles/index.css. */
+const inputCls = "field";
 const labelCls = "mb-1.5 block text-[10px] tracking-[0.14em] text-muted uppercase";
 
 export function ContactForm() {
@@ -72,7 +72,7 @@ export function ContactForm() {
       )}
 
       <button type="submit" disabled={busy}
-              className="justify-self-start bg-ink px-8 py-3.5 text-[11px] tracking-[0.16em] text-cream uppercase
+              className="min-h-11 justify-self-start bg-ink px-8 text-[11px] tracking-[0.16em] text-cream uppercase
                          transition-opacity hover:opacity-85 disabled:opacity-40 sm:col-span-2">
         {busy ? "Sending…" : "Send"}
       </button>
@@ -111,7 +111,7 @@ export function TrackForm() {
                  placeholder="Tracking number (AWB)" className={inputCls} />
         </label>
         <button type="submit" disabled={busy}
-                className="bg-ink px-8 py-3 text-[11px] tracking-[0.16em] text-cream uppercase
+                className="min-h-11 bg-ink px-8 text-[11px] tracking-[0.16em] text-cream uppercase
                            transition-opacity hover:opacity-85 disabled:opacity-40">
           {busy ? "Checking…" : "Track"}
         </button>

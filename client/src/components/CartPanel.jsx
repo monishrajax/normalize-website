@@ -11,7 +11,7 @@ export default function CartPanel({ open, onClose, onCheckout }) {
         <div className="py-20 text-center">
           <p className="mb-6 font-display text-3xl text-ink">Your bag is empty.</p>
           <button onClick={onClose}
-                  className="border border-ink px-8 py-3 text-[11px] tracking-[0.16em] text-ink uppercase
+                  className="min-h-11 border border-ink px-8 text-[11px] tracking-[0.16em] text-ink uppercase
                              transition-colors hover:bg-ink hover:text-cream">
             Continue shopping
           </button>
@@ -40,20 +40,20 @@ export default function CartPanel({ open, onClose, onCheckout }) {
                     <div className="flex items-center border border-line">
                       <button onClick={() => setQty(l.productId, l.variant, l.qty - 1)}
                               aria-label={`Decrease quantity of ${l.name}`}
-                              className="px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink">
+                              className="grid h-11 w-11 place-items-center text-sm text-muted transition-colors hover:text-ink">
                         −
                       </button>
                       <span className="min-w-8 text-center text-xs text-ink tabular-nums">{l.qty}</span>
                       <button onClick={() => setQty(l.productId, l.variant, l.qty + 1)}
                               aria-label={`Increase quantity of ${l.name}`}
-                              className="px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink">
+                              className="grid h-11 w-11 place-items-center text-sm text-muted transition-colors hover:text-ink">
                         +
                       </button>
                     </div>
 
                     <button onClick={() => removeLine(l.productId, l.variant)}
-                            className="text-[11px] tracking-[0.12em] text-muted uppercase underline
-                                       underline-offset-4 transition-colors hover:text-brown">
+                            className="flex min-h-11 items-center text-[11px] tracking-[0.12em] text-muted uppercase
+                                       underline underline-offset-4 transition-colors hover:text-brown">
                       Remove
                     </button>
                   </div>
@@ -92,7 +92,7 @@ export default function CartPanel({ open, onClose, onCheckout }) {
             </dl>
 
             <button onClick={onCheckout}
-                    className="mt-6 w-full bg-ink px-8 py-4 text-[11px] tracking-[0.18em] text-cream uppercase
+                    className="mt-6 min-h-11 w-full bg-ink px-8 py-4 text-[11px] tracking-[0.18em] text-cream uppercase
                                transition-opacity hover:opacity-85">
               Checkout
             </button>

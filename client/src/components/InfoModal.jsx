@@ -24,6 +24,10 @@ export default function InfoModal({ section, onClose, config }) {
   return (
     <Panel open={Boolean(content)} onClose={onClose} eyebrow={content?.eyebrow}>
       {content && (
+        {/* The typed document chassis, shared by all six reading pages:
+           eyebrow (from Panel), large title, typewriter lede, short gold rule,
+           body copy. The numbered margin indices and hairline dividers come
+           from .doc-list in the stylesheet. */}
         <article>
           <h2 className="mb-5 font-display text-4xl text-ink md:text-5xl">{content.title}</h2>
 
@@ -32,6 +36,8 @@ export default function InfoModal({ section, onClose, config }) {
               {fillTokens(content.lede, config)}
             </p>
           )}
+
+          <hr className="doc-rule" />
 
           {Custom ? (
             <Custom />
