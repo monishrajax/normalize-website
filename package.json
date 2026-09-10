@@ -16,7 +16,7 @@
     "build": "npm run build --prefix client",
     "start": "NODE_ENV=production npm start --prefix server",
     "dev:memory": "npm run dev:memory --prefix server & npm run dev --prefix client",
-    "vercel-build": "npm --prefix client install && npm run build --prefix client"
+    "vercel-build": "npm --prefix client ci && npm run build --prefix client"
   },
   "dependencies": {
     "@vercel/node": "^3.2.26",
