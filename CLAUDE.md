@@ -154,6 +154,35 @@ Two supported shapes:
 Secrets go in the host's environment variable settings, never in a committed file.
 See `.env.example` for the full list.
 
+### Vercel's Root Directory must stay at the repo root
+
+This is a monorepo and the deploy depends on it. `vercel.json`, `api/index.js`
+and `server/` all live at the root; only the front end lives in `client/`.
+
+Setting the project's **Root Directory** to `client` breaks the deploy twice
+over. First the build dies immediately —
+
+```
+sh: line 1: cd: client: No such file or directory
+Error: Command "cd client && npm ci && npm run build" exited with 1
+```
+
+— because `buildCommand` already does the `cd` itself. The tell is the install
+line just above it: ~84 packages is `client/`'s dependency count, the repo root
+installs ~232.
+
+The second failure is the dangerous one, because it is silent. From inside
+`client/` Vercel never sees the root `vercel.json` or `api/index.js`, so a build
+that *did* succeed would ship a storefront with:
+
+- no `/api/*` function at all — the catalogue never loads and no order can be placed
+- no `/(.*)` rewrite — every deep link 404s
+- none of the `X-Frame-Options` / `nosniff` / `Referrer-Policy` headers
+
+So the fix for that `cd` error is **never** to drop `cd client` from the build
+command. Clear the Root Directory setting (Project → Settings → Build and
+Deployment → Root Directory) and leave it at `./`.
+
 ## Known issues
 
 **`start()` runs on import — `server/src/index.js`.** The comment says it is only
