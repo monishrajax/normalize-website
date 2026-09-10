@@ -402,6 +402,30 @@ Four things here are easy to break by accident:
    theorised. Listening there leaves the coin ungrabbable at exactly the angle a
    visitor most wants to correct.
 
+## Product photography
+
+Assets live in `client/public/assets/` as WebP at **1000×1250 (4:5)**, referenced
+from `catalogue.json` per edition. Keep that ratio: the Spotlight's `<img>`
+declares `width="1000" height="1250"` with `object-cover`, so a photo of a
+different shape gets cropped to fit, and mismatched ratios make the frame jump
+when the edition is switched.
+
+The Spotlight is a dark stage (`bg-ink`), so a product shot on a **dark ground**
+sits far better than one on a light wall — the background merges into the stage
+and the bag reads as floating rather than sitting in a lit rectangle.
+
+**Currently inconsistent, and worth resolving:** the Dusk photo is on dark
+concrete (background ≈ RGB 41,41,41); the Dawn photo is still on the original
+light warm wall (≈ 113,108,109). Switching editions therefore swaps the whole
+background, not just the bag. Either re-shoot Dawn on the dark ground or grade
+the existing one down — but do not grade it silently, it is the client's
+photography.
+
+Also note the weight: the dark concrete is heavily grained and costs bits. Dusk
+is 334KB at WebP q82 against Dawn's 152KB, and it is eager-loaded with
+`fetchpriority="high"`. Quality below ~q78 starts to mush the jute weave, which
+the copy explicitly sells ("an open weave left honest").
+
 ## The genie
 
 `lib/genie.js` — plain DOM plus the Web Animations API, deliberately not
