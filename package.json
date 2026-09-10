@@ -2,7 +2,10 @@
   "name": "normalize",
   "version": "1.0.0",
   "private": true,
-  "description": "Normalize storefront — React + Tailwind client, Express + MongoDB API.",
+  "engines": {
+    "node": "22.x"
+  },
+  "description": "Normalize storefront \u2014 React + Tailwind client, Express + MongoDB API.",
   "scripts": {
     "install:all": "npm --prefix client install && npm --prefix server install",
     "dev": "npm run dev --prefix server & npm run dev --prefix client",
