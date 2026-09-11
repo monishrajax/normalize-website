@@ -10,7 +10,8 @@ import orderRoutes from "./routes/orders.js";
 import trackingRoutes from "./routes/tracking.js";
 import configRoutes from "./routes/config.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /* ---------------------------------------------------------------------------
    createApp — builds and returns the configured Express application.
@@ -116,7 +117,23 @@ async function start() {
   });
 }
 
-start().catch((err) => {
-  console.error("Failed to start:", err);
-  process.exit(1);
-});
+/* THE GUARD. Without it, `start()` runs on IMPORT — and this module is imported
+   by api/index.js, the Vercel serverless adapter. In that environment it either
+   calls process.exit(1) (when MONGODB_URI is unset), killing the function before
+   it can serve a single request, or it opens a second mongoose connection and
+   calls app.listen() inside a serverless runtime that has nothing to listen on.
+   Either way the API returns FUNCTION_INVOCATION_FAILED, which is exactly what
+   it did in production.
+
+   Comparing against process.argv[1] rather than sniffing for VERCEL keeps this
+   honest anywhere the module is imported — a test harness, a script, another
+   host — not just on one platform. */
+const isEntryPoint =
+  process.argv[1] && path.resolve(process.argv[1]) === __filename;
+
+if (isEntryPoint) {
+  start().catch((err) => {
+    console.error("Failed to start:", err);
+    process.exit(1);
+  });
+}

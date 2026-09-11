@@ -30,7 +30,21 @@ async function ensureDb() {
 const app = createApp();
 
 export default async function handler(req, res) {
-  await ensureDb();
+  /* A failure here used to reject the handler, which Vercel surfaces as an
+     opaque FUNCTION_INVOCATION_FAILED with no hint of the cause — the browser
+     shows a 500 and the reason is only visible in the dashboard logs. Catching
+     it turns a missing MONGODB_URI or an unreachable cluster into a clean,
+     readable 503, with the real error still logged for the function log. */
+  try {
+    await ensureDb();
+  } catch (err) {
+    console.error("Database connection failed:", err);
+    res.statusCode = 503;
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({
+      error: "The store is temporarily unavailable. Please try again shortly.",
+    }));
+  }
   // Delegate the request to the Express app.
   return app(req, res);
 }

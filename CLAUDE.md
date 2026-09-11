@@ -522,9 +522,16 @@ is hidden, so CSS transitions stall mid-flight. Neither is a fault in the site.
 
 Both predate this work and are unchanged — the server was not touched.
 
-**`start()` runs on import — `server/src/index.js:119`.** No guard, so importing
-`createApp` from `api/index.js` also fires `mongoose.connect()` and
-`app.listen(PORT)` on a Vercel cold start.
+**~~`start()` runs on import~~ — FIXED.** It is now guarded by an entry-point
+check (`process.argv[1]` vs `__filename`), so importing `createApp` from
+`api/index.js` no longer starts a server. This was not theoretical: unguarded,
+a missing `MONGODB_URI` made `start()` call `process.exit(1)` at module load,
+killing the serverless function before it could serve anything — every route,
+including `/api/health`, returned `FUNCTION_INVOCATION_FAILED` in production.
+
+`api/index.js` now also catches an `ensureDb()` failure and returns a readable
+503 instead of letting the handler reject into an opaque
+`FUNCTION_INVOCATION_FAILED`. The real error goes to the function log.
 
 **`npm test` needs credentials.** `server/test/e2e.mjs` requires real `rzp_test_*`
 keys in `server/.env` and exits early without them.
