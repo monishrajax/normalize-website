@@ -61,7 +61,7 @@ export async function priceCart(items, promoCode) {
   return { lines, subtotal, discount, shipping, total, promo: rate ? code : "" };
 }
 
-/* Ids are Postgres uuids now, not Mongo ObjectIds. Filtering before the query
+/* Product ids are Postgres uuids. Filtering before the query
    keeps a malformed id from reaching the database as a cast error — Postgres
    rejects a bad uuid with a 22P02, which would surface as a 500 rather than the
    "Unknown item in cart" the customer should see. */

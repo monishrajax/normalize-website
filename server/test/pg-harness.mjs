@@ -1,5 +1,5 @@
-/* A throwaway Postgres for the test suite — the replacement for what
-   mongodb-memory-server used to do.
+/* A throwaway Postgres for the test suite, created and destroyed inside the
+   run so `npm test` never needs a database you care about.
 
    Order of preference:
      1. TEST_DATABASE_URL, if you want to point the suite at a real database

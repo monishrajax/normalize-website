@@ -84,8 +84,9 @@ export async function update(id, patch) {
 
    `where status = 'created'` makes the database itself the referee: whichever
    request arrives second updates zero rows and gets null back, instead of both
-   reading "created" and both proceeding. The Mongo version checked the status
-   in JavaScript first, which left a real window between the read and the save. */
+   reading "created" and both proceeding. Checking the status in JavaScript
+   first — as the previous implementation did — leaves a real window between the
+   read and the save that a concurrent request can slip through. */
 export async function settleIfUnpaid(id, patch) {
   const sql = db();
   const [row] = await sql`

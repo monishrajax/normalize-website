@@ -1,8 +1,9 @@
 -- Normalize — initial schema.
 -- Run once in the Supabase SQL editor (or: psql "$DATABASE_URL" -f 001_init.sql).
 --
--- Mirrors what the Mongo models held, with two deliberate differences:
---   · `desc` became `description`, because DESC is a reserved word in SQL.
+-- Two things here are not obvious:
+--   · The product blurb column is `description`, not `desc` — DESC is a
+--     reserved word in SQL. `toPublic()` maps it back to `desc` for the API.
 --   · Nested objects that were embedded documents are jsonb. For orders that is
 --     not laziness: items/pricing/customer are a point-in-time SNAPSHOT of what
 --     was charged and where it went, and must not change when the catalogue

@@ -68,7 +68,7 @@ straight from the catalogue, and the only list left on it is brand-level
 
 ## The database — Supabase Postgres
 
-Migrated off MongoDB. `server/src/db.js` owns a single `postgres.js` pool;
+`server/src/db.js` owns a single `postgres.js` pool;
 `models/Product.js` and `models/Order.js` are plain query modules, not ORM
 classes. Schema lives in `server/sql/001_init.sql` and is applied by hand once
 (Supabase SQL editor, or `psql "$DATABASE_URL" -f`).
@@ -89,8 +89,8 @@ Five things here are deliberate and easy to undo by accident:
    (`Dawn`, `Dusk`) and those keys must survive verbatim.
 4. **Order settling goes through `settleIfUnpaid`**, whose `where status =
    'created'` makes the database the referee. The browser's verify call and the
-   webhook can arrive together; the Mongo version checked status in JavaScript
-   first, which left a real window between the read and the save.
+   webhook can arrive together, and checking status in JavaScript first leaves
+   a real window between the read and the save.
 5. **RLS is enabled on both tables with no policies.** The API connects over the
    Postgres protocol as the owner and bypasses RLS entirely, so this costs it
    nothing — what it does is shut the door on Supabase's auto-generated
@@ -98,7 +98,7 @@ Five things here are deliberate and easy to undo by accident:
    names, phone numbers and addresses. Do not add a permissive policy without a
    specific reason.
 
-Ids are `uuid` now, not Mongo ObjectIds — `pricing.js` validates the uuid shape
+Product ids are `uuid` — `pricing.js` validates the uuid shape
 before querying so a malformed id returns "Unknown item in cart" rather than a
 Postgres 22P02 cast error surfacing as a 500.
 

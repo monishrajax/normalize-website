@@ -39,8 +39,9 @@ export async function list({ category, q, sort } = {}) {
 
   /* ILIKE treats % and _ as wildcards, so a search for "50%" would otherwise
      match everything. Escaping them (and the escape character itself) keeps a
-     search a search. The regex-escaping the Mongo version needed is gone with
-     the regex. */
+     search a search. This replaces a regex-escaping step: the old query built a
+     regular expression from user input, so it had to neutralise regex
+     metacharacters too. ILIKE has a smaller blast radius. */
   const pattern = term
     ? `%${term.replace(/([\\%_])/g, "\\$1")}%`
     : null;

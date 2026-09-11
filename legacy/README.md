@@ -16,7 +16,7 @@ Everything of substance was carried across:
 
 | Was | Now |
 |---|---|
-| `PRODUCTS` array in the page | `products` collection in MongoDB |
+| `PRODUCTS` array in the page | `products` table in Postgres |
 | `CATALOGUE` in `_lib.js` (a second, drifted copy of the prices) | the same collection — one source of truth |
 | `PRODUCT_DETAILS` | `details` on each product document |
 | `INFO_CONTENT` | `client/src/data/infoContent.js` |
