@@ -1,6 +1,13 @@
 import { Router } from "express";
 import express from "express";
-import Order from "../models/Order.js";
+import {
+  create as createOrder,
+  findByRazorpayOrderId,
+  findByOrderNumber,
+  update as updateOrder,
+  settleIfUnpaid,
+  toPublic,
+} from "../models/Order.js";
 import { priceCart, PricingError } from "../lib/pricing.js";
 import { createRazorpayOrder, isValidPaymentSignature, isValidWebhookSignature, publicKeyId } from "../lib/razorpay.js";
 import { shiprocket, shiprocketConfigured } from "../lib/shiprocket.js";
@@ -36,12 +43,12 @@ router.post("/", async (req, res, next) => {
       notes: { items: priced.lines.map((l) => `${l.name} (${l.variant}) x${l.qty}`).join(", ") },
     });
 
-    await Order.create({
+    await createOrder({
       orderNumber,
       razorpayOrderId: rzpOrder.id,
       status: "created",
       items: priced.lines.map((l) => ({
-        product: l.productId, name: l.name, price: l.price,
+        productId: l.productId, name: l.name, price: l.price,
         variant: l.variant, qty: l.qty, sku: l.sku,
       })),
       pricing: {
@@ -68,6 +75,19 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+/* Both settle paths share this. `settleIfUnpaid` updates only while the row is
+   still "created", so whichever of the browser and the webhook arrives second
+   gets null back and stops — the database is the referee rather than a status
+   check in JavaScript that another request can slip past. */
+async function settle(order, patch) {
+  const settled = await settleIfUnpaid(order.id, patch);
+  if (!settled) return null;          // someone else already settled it
+  if (CREATE_SHIPMENT && shiprocketConfigured()) {
+    await bookShipment(settled).catch((err) => console.error("Shipment booking failed:", err));
+  }
+  return settled;
+}
+
 /* ---------------------------------------------------------------------------
    POST /api/orders/verify — the security gate. Only a request carrying a
    signature Razorpay itself produced can mark an order paid.
@@ -90,36 +110,28 @@ router.post("/verify", async (req, res, next) => {
       return res.status(400).json({ error: "Payment could not be verified." });
     }
 
-    const order = await Order.findOne({ razorpayOrderId: razorpay_order_id });
+    const order = await findByRazorpayOrderId(razorpay_order_id);
     if (!order) return res.status(404).json({ error: "Order not found." });
 
-    // The webhook may have got here first — settling twice would double-book
-    // the courier, so treat an already-paid order as success and stop.
-    if (order.status === "paid" || order.status === "shipped") {
-      return res.json({ ok: true, order: order.toPublic() });
-    }
+    const settled = await settle(order, {
+      status: "paid",
+      razorpayPaymentId: razorpay_payment_id,
+      paidAt: new Date(),
+      customer: {
+        name: String(customer.name || "").slice(0, 120),
+        email: String(customer.email || "").slice(0, 160),
+        phone: String(customer.phone || "").replace(/\D/g, "").slice(-10),
+        address: String(customer.address || "").slice(0, 300),
+        city: String(customer.city || "").slice(0, 80),
+        state: String(customer.state || "").slice(0, 80),
+        pincode: String(customer.pincode || "").slice(0, 10),
+      },
+    });
 
-    order.status = "paid";
-    order.razorpayPaymentId = razorpay_payment_id;
-    order.paidAt = new Date();
-    order.customer = {
-      name: String(customer.name || "").slice(0, 120),
-      email: String(customer.email || "").slice(0, 160),
-      phone: String(customer.phone || "").replace(/\D/g, "").slice(-10),
-      address: String(customer.address || "").slice(0, 300),
-      city: String(customer.city || "").slice(0, 80),
-      state: String(customer.state || "").slice(0, 80),
-      pincode: String(customer.pincode || "").slice(0, 10),
-    };
-    await order.save();
-
-    // The money is already taken. A courier problem must never surface to the
-    // customer as a failed order.
-    if (CREATE_SHIPMENT && shiprocketConfigured()) {
-      await bookShipment(order).catch((err) => console.error("Shipment booking failed:", err));
-    }
-
-    res.json({ ok: true, order: order.toPublic() });
+    /* The webhook may have got here first — settling twice would double-book
+       the courier, so treat an already-paid order as success and stop. */
+    const current = settled || (await findByRazorpayOrderId(razorpay_order_id));
+    res.json({ ok: true, order: toPublic(current) });
   } catch (err) {
     next(err);
   }
@@ -152,25 +164,25 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     const payment = event.payload?.payment?.entity;
     if (!payment?.order_id) return;
 
-    const order = await Order.findOne({ razorpayOrderId: payment.order_id });
-    if (!order || order.status === "paid" || order.status === "shipped") return;
+    const order = await findByRazorpayOrderId(payment.order_id);
+    if (!order) return;
 
-    order.status = "paid";
-    order.razorpayPaymentId = payment.id;
-    order.paidAt = new Date();
-    order.notes = "Settled via webhook (browser never confirmed).";
     // Razorpay carries whatever the customer typed into checkout; it may be the
     // only contact detail we get if the browser never posted the form.
-    if (payment.email && !order.customer.email) order.customer.email = payment.email;
-    if (payment.contact && !order.customer.phone) {
-      order.customer.phone = String(payment.contact).replace(/\D/g, "").slice(-10);
+    const customer = { ...(order.customer ?? {}) };
+    if (payment.email && !customer.email) customer.email = payment.email;
+    if (payment.contact && !customer.phone) {
+      customer.phone = String(payment.contact).replace(/\D/g, "").slice(-10);
     }
-    await order.save();
-    console.log("Order settled by webhook:", order.orderNumber);
 
-    if (CREATE_SHIPMENT && shiprocketConfigured()) {
-      await bookShipment(order).catch((err) => console.error("Webhook shipment failed:", err));
-    }
+    const settled = await settle(order, {
+      status: "paid",
+      razorpayPaymentId: payment.id,
+      paidAt: new Date(),
+      notes: "Settled via webhook (browser never confirmed).",
+      customer,
+    });
+    if (settled) console.log("Order settled by webhook:", settled.orderNumber);
   } catch (err) {
     console.error("Webhook processing error:", err);
   }
@@ -179,9 +191,9 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
 /* GET /api/orders/:orderNumber — order status lookup for the confirmation page. */
 router.get("/:orderNumber", async (req, res, next) => {
   try {
-    const order = await Order.findOne({ orderNumber: req.params.orderNumber });
+    const order = await findByOrderNumber(req.params.orderNumber);
     if (!order) return res.status(404).json({ error: "Order not found." });
-    res.json({ order: order.toPublic() });
+    res.json({ order: toPublic(order) });
   } catch (err) {
     next(err);
   }
@@ -189,20 +201,21 @@ router.get("/:orderNumber", async (req, res, next) => {
 
 /* --------------------------------------------------------------------------- */
 async function bookShipment(order) {
-  const first = (order.customer.name || "Customer").trim().split(/\s+/);
+  const customer = order.customer ?? {};
+  const first = (customer.name || "Customer").trim().split(/\s+/);
   const payload = {
     order_id: order.orderNumber,
     order_date: new Date().toISOString().slice(0, 19).replace("T", " "),
     pickup_location: process.env.SHIPROCKET_PICKUP || "Primary",
     billing_customer_name: first[0],
     billing_last_name: first.slice(1).join(" ") || ".",
-    billing_address: order.customer.address,
-    billing_city: order.customer.city,
-    billing_pincode: order.customer.pincode,
-    billing_state: order.customer.state,
+    billing_address: customer.address,
+    billing_city: customer.city,
+    billing_pincode: customer.pincode,
+    billing_state: customer.state,
     billing_country: "India",
-    billing_email: order.customer.email,
-    billing_phone: order.customer.phone,
+    billing_email: customer.email,
+    billing_phone: customer.phone,
     shipping_is_billing: true,
     order_items: order.items.map((l) => ({
       name: `${l.name}${l.variant ? " — " + l.variant : ""}`,
@@ -223,13 +236,11 @@ async function bookShipment(order) {
 
   if (!created.ok || !created.data.shipment_id) {
     console.error("Shiprocket order failed:", created.status, created.data);
-    order.shipping.pending = true;
-    await order.save();
+    // True when payment succeeded but the courier booking did not. These are
+    // the orders a human needs to look at.
+    await updateOrder(order.id, { shipping: { ...(order.shipping ?? {}), pending: true } });
     return;
   }
-
-  order.shipping.shiprocketOrderId = String(created.data.order_id || "");
-  order.shipping.shipmentId = String(created.data.shipment_id);
 
   const awbRes = await shiprocket("/courier/assign/awb", {
     method: "POST",
@@ -237,11 +248,18 @@ async function bookShipment(order) {
   });
   const awbData = awbRes.data?.response?.data || {};
 
-  order.shipping.awb = awbData.awb_code || null;
-  order.shipping.courier = awbData.courier_name || null;
-  order.shipping.pending = !awbData.awb_code;
-  if (order.shipping.awb) order.status = "shipped";
-  await order.save();
+  const shipping = {
+    ...(order.shipping ?? {}),
+    shiprocketOrderId: String(created.data.order_id || ""),
+    shipmentId: String(created.data.shipment_id),
+    awb: awbData.awb_code || null,
+    courier: awbData.courier_name || null,
+    pending: !awbData.awb_code,
+  };
+  await updateOrder(order.id, {
+    shipping,
+    ...(shipping.awb ? { status: "shipped" } : {}),
+  });
 }
 
 export default router;

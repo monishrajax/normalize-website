@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { shiprocket, normaliseTracking, shiprocketConfigured } from "../lib/shiprocket.js";
-import Order from "../models/Order.js";
+import { findByOrderNumber } from "../models/Order.js";
 
 const router = Router();
 
@@ -14,9 +14,9 @@ router.get("/", async (req, res, next) => {
 
     // Customers know their order number, not the AWB, so accept either.
     if (!awb && orderNumber) {
-      const order = await Order.findOne({ orderNumber });
+      const order = await findByOrderNumber(orderNumber);
       if (!order) return res.status(404).json({ error: "We couldn't find that order." });
-      if (!order.shipping.awb) {
+      if (!order.shipping?.awb) {
         return res.status(404).json({ error: "Your order isn't dispatched yet. Tracking appears once it ships." });
       }
       awb = order.shipping.awb;

@@ -16,7 +16,7 @@ works in paise (`Math.round(total * 100)`).
 
 ```
 client/     React 18 + Vite 6 + Tailwind v4   (~2,700 LOC)
-server/     Express 4 + Mongoose              (~880 LOC)
+server/     Express 4 + Postgres (postgres.js) (~900 LOC)
 api/        Vercel serverless adapter (imports server/src/index.js)
 legacy/     the old single-file site + Netlify functions — dead, not deployed
 netlify/    orphan leftover; only functions/_lib.js, the real copy is in legacy/
@@ -26,9 +26,9 @@ netlify/    orphan leftover; only functions/_lib.js, the real copy is in legacy/
 
 ```bash
 npm run install:all     # installs client + server
-npm run seed            # loads server/src/data/catalogue.json into MongoDB
+npm run seed            # loads server/src/data/catalogue.json into Postgres
 npm run dev             # server :5050 + client :5173 (Vite proxies /api)
-npm run dev:memory      # same, but with an in-memory MongoDB
+npm run dev:memory      # same, but against a throwaway Postgres
 npm test                # e2e — SEE CAVEAT BELOW
 npm run build           # vite build → client/dist
 ```
@@ -41,7 +41,7 @@ without it esbuild never fetches its platform binary and `vite build` fails.
 Everything on the server is organised around this. Do not break it.
 
 - The client posts `{ productId, variant, qty }` — nothing else about money.
-- `server/src/lib/pricing.js` (`priceCart`) looks prices up in MongoDB and computes
+- `server/src/lib/pricing.js` (`priceCart`) looks prices up in Postgres and computes
   subtotal / discount / shipping / total itself.
 - `localStorage` holds only ids, variants and quantities. Names, prices and images
   are joined back on from the catalogue the server sent. Tampering with storage can
@@ -65,6 +65,42 @@ has them (Dusk's are blue-and-white striped — visible in
 `client/public/assets/tote-dusk.webp`). It now renders `product.details`
 straight from the catalogue, and the only list left on it is brand-level
 (returns, batches, Chennai) with nothing product-specific to drift.
+
+## The database — Supabase Postgres
+
+Migrated off MongoDB. `server/src/db.js` owns a single `postgres.js` pool;
+`models/Product.js` and `models/Order.js` are plain query modules, not ORM
+classes. Schema lives in `server/sql/001_init.sql` and is applied by hand once
+(Supabase SQL editor, or `psql "$DATABASE_URL" -f`).
+
+Five things here are deliberate and easy to undo by accident:
+
+1. **`prepare: false` in db.js is required.** The Supabase connection string
+   should point at the transaction-mode pooler (port 6543), where a connection
+   is handed to a different client between statements. Prepared statements do
+   not survive that; the symptom is an intermittent "prepared statement does not
+   exist" under load.
+2. **`weight_kg` is `double precision`, not `numeric`.** Postgres returns
+   `numeric` as a *string* to preserve precision, so `weight_kg` arrived as
+   `"0.350"` and arithmetic on it silently concatenated. Money is unaffected —
+   `price` is `integer` rupees, which is the only column where exactness matters.
+3. **`postgres.camel` transforms column names only**, verified — jsonb contents
+   pass through untouched. That matters because `images` is keyed by variant
+   (`Dawn`, `Dusk`) and those keys must survive verbatim.
+4. **Order settling goes through `settleIfUnpaid`**, whose `where status =
+   'created'` makes the database the referee. The browser's verify call and the
+   webhook can arrive together; the Mongo version checked status in JavaScript
+   first, which left a real window between the read and the save.
+5. **RLS is enabled on both tables with no policies.** The API connects over the
+   Postgres protocol as the owner and bypasses RLS entirely, so this costs it
+   nothing — what it does is shut the door on Supabase's auto-generated
+   PostgREST API, which is public on every project. `orders` holds customer
+   names, phone numbers and addresses. Do not add a permissive policy without a
+   specific reason.
+
+Ids are `uuid` now, not Mongo ObjectIds — `pricing.js` validates the uuid shape
+before querying so a malformed id returns "Unknown item in cart" rather than a
+Postgres 22P02 cast error surfacing as a 500.
 
 ## Payment flow (Razorpay)
 
@@ -144,7 +180,7 @@ db.products.updateMany({}, { $set: { isSellable: true } })
 Two supported shapes:
 
 - **Vercel** (current) — `vercel.json` routes `/api/*` to `api/index.js`, which
-  connects Mongo once per warm instance and delegates to the Express app. Static
+  verifies the Postgres pool once per warm instance and delegates to the Express app. Static
   assets come off Vercel's CDN, so `createApp` skips its `express.static` block when
   `VERCEL === "1"`.
 - **Single Node host** — `npm run build && npm start` serves `client/dist` from the
@@ -188,12 +224,12 @@ Deployment → Root Directory) and leave it at `./`.
 **`start()` runs on import — `server/src/index.js`.** The comment says it is only
 called when the file is the process entry point, but there is no guard. `api/index.js`
 imports `createApp` from this module, so on Vercel a cold start also fires
-`mongoose.connect()` and `app.listen(PORT)` alongside the adapter's own `ensureDb()`.
+a second database pool and `app.listen(PORT)` alongside the adapter's own `ensureDb()`.
 Needs a `process.env.VERCEL !== "1"` check or the `import.meta.url === process.argv[1]`
 idiom.
 
 **`npm test` cannot run without credentials.** `server/test/e2e.mjs` spins up an
-in-memory MongoDB and the real server, but requires live-looking `rzp_test_*` keys in
+throwaway Postgres and the real server, but requires live-looking `rzp_test_*` keys in
 `server/.env` and exits early without them. It refuses outright if the key is not a
 test key. The README's "33 checks" therefore need credentials that are correctly not
 in the repo.
@@ -525,7 +561,7 @@ Both predate this work and are unchanged — the server was not touched.
 **~~`start()` runs on import~~ — FIXED.** It is now guarded by an entry-point
 check (`process.argv[1]` vs `__filename`), so importing `createApp` from
 `api/index.js` no longer starts a server. This was not theoretical: unguarded,
-a missing `MONGODB_URI` made `start()` call `process.exit(1)` at module load,
+a missing database URL made `start()` call `process.exit(1)` at module load,
 killing the serverless function before it could serve anything — every route,
 including `/api/health`, returned `FUNCTION_INVOCATION_FAILED` in production.
 

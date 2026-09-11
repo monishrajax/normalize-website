@@ -2,8 +2,7 @@
  * Vercel Serverless Function — API adapter.
  *
  * Vercel routes every /api/* request here. This file:
- *   1. Connects to MongoDB once per warm instance (connection is reused
- *      across invocations while the function stays warm).
+ *   1. Verifies the Postgres pool is reachable once per warm instance.
  *   2. Exports the Express app so @vercel/node can handle each request.
  *
  * Note: this file lives at the repo root so Vercel's build picks it up
@@ -11,20 +10,23 @@
  * separate build step is needed because @vercel/node bundles it with esbuild.
  */
 
-import mongoose from "mongoose";
 import { createApp } from "../server/src/index.js";
+import { pingDb } from "../server/src/db.js";
 
-/* Keep the MongoDB connection alive across warm invocations. Serverless
-   functions share the same Node process while warm, so connecting once is
-   enough. A fresh connection is made after a cold start. */
-let connected = false;
+/* postgres.js manages its own pool and reconnects on its own, so there is no
+   connection to hold open by hand here — the pool lives in server/src/db.js and
+   is reused for as long as the instance stays warm. What this still owes the
+   caller is a fast, loud failure when the database is unreachable, so a cold
+   start checks once rather than letting the first customer request discover it. */
+let verified = false;
 
 async function ensureDb() {
-  if (connected && mongoose.connection.readyState === 1) return;
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error("MONGODB_URI is not set in Vercel environment variables.");
-  await mongoose.connect(uri);
-  connected = true;
+  if (verified) return;
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is not set in Vercel environment variables.");
+  }
+  await pingDb();
+  verified = true;
 }
 
 const app = createApp();
@@ -33,7 +35,7 @@ export default async function handler(req, res) {
   /* A failure here used to reject the handler, which Vercel surfaces as an
      opaque FUNCTION_INVOCATION_FAILED with no hint of the cause — the browser
      shows a 500 and the reason is only visible in the dashboard logs. Catching
-     it turns a missing MONGODB_URI or an unreachable cluster into a clean,
+     it turns a missing DATABASE_URL or an unreachable database into a clean,
      readable 503, with the real error still logged for the function log. */
   try {
     await ensureDb();

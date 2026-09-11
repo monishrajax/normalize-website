@@ -1,24 +1,24 @@
-/* Runs the real server against a throwaway in-memory MongoDB.
+/* Runs the real server against a throwaway Postgres.
 
-   Run with:  npm run dev:memory      (from server/, or `npm run dev:memory` at the root)
+   Run with:  npm run dev:memory      (from server/, or at the repo root)
 
-   For trying the site before you have a database set up. Everything is real
-   except the storage: the catalogue is seeded fresh on each boot and vanishes
-   when you stop the process, so never use this for anything you want to keep.
-   Razorpay still runs in test mode against the keys in the environment. */
-import { MongoMemoryServer } from "mongodb-memory-server";
+   For trying the site before you have a Supabase project set up. Everything is
+   real except the storage: the schema is applied and the catalogue seeded fresh
+   on each boot, and the whole database is discarded when you stop the process —
+   so never use this for anything you want to keep. Razorpay still runs in test
+   mode against the keys in the environment. */
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { startTestPostgres } from "./pg-harness.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const mongo = await MongoMemoryServer.create();
-console.log("Temporary in-memory MongoDB started (data is discarded on exit).\n");
+const pg = await startTestPostgres();
 
 const env = {
   ...process.env,
-  MONGODB_URI: mongo.getUri("normalize"),
+  DATABASE_URL: pg.url,
   PORT: process.env.PORT || "5050",
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || "http://localhost:5173",
   // Read from server/.env — never hardcoded, so this file is safe to commit.
@@ -38,8 +38,9 @@ const server = spawn("node", ["src/index.js"], { cwd: ROOT, env, stdio: "inherit
 
 const shutdown = async () => {
   server.kill();
-  await mongo.stop();
+  await pg.stop();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+server.on("exit", shutdown);

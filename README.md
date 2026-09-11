@@ -3,7 +3,7 @@
 Storefront for a single-product launch, built on the MERN stack.
 
 - **client/** — React 18 + Vite + Tailwind CSS v4
-- **server/** — Express + MongoDB (Mongoose), Razorpay payments, Shiprocket logistics
+- **server/** — Express + Supabase Postgres, Razorpay payments, Shiprocket logistics
 
 ---
 
@@ -19,12 +19,22 @@ Then create `server/.env` from the template and fill it in:
 cp server/.env.example server/.env
 ```
 
-You need a MongoDB connection string. The two easy options:
+You need a Postgres connection string in `DATABASE_URL`. Two easy options:
 
-- **MongoDB Atlas** (free tier, nothing to install) — create a cluster, then use
-  the `mongodb+srv://…` string it gives you.
-- **Local** — `brew install mongodb-community && brew services start mongodb-community`,
-  then keep the default `mongodb://127.0.0.1:27017/normalize`.
+- **Supabase** (free tier, nothing to install) — create a project, then
+  Project Settings → Database → Connection string. Use the **transaction pooler**
+  (port 6543), not the direct connection: serverless opens a connection per
+  instance and the pooler exists for exactly that.
+- **Local** — `brew install postgresql@16 && brew services start postgresql@16`,
+  then `createdb normalize` and use `postgres://postgres@127.0.0.1:5432/normalize`.
+
+Create the tables once, before seeding:
+
+```bash
+psql "$DATABASE_URL" -f server/sql/001_init.sql
+```
+
+On Supabase you can paste that file into the SQL editor instead.
 
 Load the catalogue:
 
@@ -47,16 +57,18 @@ Client on http://localhost:5173, API on http://localhost:5050. Vite proxies
 npm test
 ```
 
-Spins up an in-memory MongoDB and the real server, then exercises the catalogue,
-pricing, the payment signature gate and the webhook — 33 checks, no local
-database needed, no real money moved.
+Spins up a throwaway Postgres and the real server, then exercises the catalogue,
+pricing, the payment signature gate and the webhook — 33 checks, no real money
+moved. The database is created and deleted inside the run, so it can never touch
+a real one. Needs `initdb`/`pg_ctl` on PATH (they come with Postgres), or set
+`TEST_DATABASE_URL` to point the suite at a scratch database instead.
 
 ---
 
 ## How money works
 
 The browser never sends a price. It sends `{ productId, variant, qty }`; the
-server looks the price up in MongoDB and charges what **it** computes.
+server looks the price up in Postgres and charges what **it** computes.
 
 1. `POST /api/orders` — prices the cart, opens a Razorpay order, records it as `created`
 2. Razorpay's own checkout takes the card details (they never touch this server)
@@ -76,8 +88,8 @@ Only products with `isSellable: true` can be bought, and the site shows the
 single-product spotlight while exactly one qualifies. To open the full catalogue
 there is no redeploy — it's a database update:
 
-```js
-db.products.updateMany({}, { $set: { isSellable: true } })
+```sql
+update products set is_sellable = true;
 ```
 
 ## Going live
@@ -87,7 +99,7 @@ committed file:
 
 | Variable | Notes |
 |---|---|
-| `MONGODB_URI` | Atlas connection string |
+| `DATABASE_URL` | Supabase transaction-pooler connection string (port 6543) |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | `rzp_live_…`; needs a KYC-activated account |
 | `RAZORPAY_WEBHOOK_SECRET` | from the dashboard webhook you create |
 | `CLIENT_ORIGIN` | your real domain — without it CORS only allows localhost |

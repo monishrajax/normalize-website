@@ -1,4 +1,4 @@
-import Product from "../models/Product.js";
+import { findByIds } from "../models/Product.js";
 
 /* Shipping and promo rules live on the server for the same reason prices do:
    the customer is charged what THIS file works out, not what the page showed.
@@ -22,8 +22,8 @@ export async function priceCart(items, promoCode) {
 
   // One round trip for the whole cart rather than a query per line.
   const ids = [...new Set(items.map((i) => String(i.productId || "")))];
-  const found = await Product.find({ _id: { $in: ids.filter(isObjectId) } });
-  const byId = new Map(found.map((p) => [p._id.toString(), p]));
+  const found = await findByIds(ids.filter(isUuid));
+  const byId = new Map(found.map((p) => [p.id, p]));
 
   const lines = items.map((raw) => {
     const product = byId.get(String(raw.productId));
@@ -61,6 +61,10 @@ export async function priceCart(items, promoCode) {
   return { lines, subtotal, discount, shipping, total, promo: rate ? code : "" };
 }
 
-function isObjectId(v) {
-  return /^[a-f\d]{24}$/i.test(v);
+/* Ids are Postgres uuids now, not Mongo ObjectIds. Filtering before the query
+   keeps a malformed id from reaching the database as a cast error — Postgres
+   rejects a bad uuid with a 22P02, which would surface as a 500 rather than the
+   "Unknown item in cart" the customer should see. */
+function isUuid(v) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }

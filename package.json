@@ -5,7 +5,7 @@
   "engines": {
     "node": "22.x"
   },
-  "description": "Normalize storefront \u2014 React + Tailwind client, Express + MongoDB API.",
+  "description": "Normalize storefront \u2014 React + Tailwind client, Express + Supabase Postgres API.",
   "scripts": {
     "install:all": "npm --prefix client install && npm --prefix server install",
     "dev": "npm run dev --prefix server & npm run dev --prefix client",
@@ -23,6 +23,6 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "express-rate-limit": "^7.4.1",
-    "mongoose": "^8.9.5"
+    "postgres": "^3.4.9"
   }
 }

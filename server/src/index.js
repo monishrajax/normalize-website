@@ -1,7 +1,7 @@
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import { pingDb, closeDb } from "./db.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 /* ---------------------------------------------------------------------------
    createApp — builds and returns the configured Express application.
    Exported so the Vercel serverless adapter (api/index.js) can import it
-   without also triggering mongoose.connect / app.listen.
+   without also opening a database pool or calling app.listen.
 --------------------------------------------------------------------------- */
 export function createApp() {
   const app = express();
@@ -86,17 +86,16 @@ export function createApp() {
 }
 
 /* ---------------------------------------------------------------------------
-   start — connects to MongoDB then starts the HTTP server.
+   start — checks the database is reachable, then starts the HTTP server.
    Only called when this file is the process entry point (local dev / `npm start`).
 --------------------------------------------------------------------------- */
 async function start() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    console.error("MONGODB_URI is not set. Copy server/.env.example to server/.env.");
+  if (!process.env.DATABASE_URL) {
+    console.error("DATABASE_URL is not set. Copy server/.env.example to server/.env.");
     process.exit(1);
   }
-  await mongoose.connect(uri);
-  console.log("MongoDB connected.");
+  await pingDb();
+  console.log("Postgres connected.");
 
   const PORT = process.env.PORT || 5050;
   const app = createApp();
@@ -119,8 +118,8 @@ async function start() {
 
 /* THE GUARD. Without it, `start()` runs on IMPORT — and this module is imported
    by api/index.js, the Vercel serverless adapter. In that environment it either
-   calls process.exit(1) (when MONGODB_URI is unset), killing the function before
-   it can serve a single request, or it opens a second mongoose connection and
+   calls process.exit(1) (when DATABASE_URL is unset), killing the function before
+   it can serve a single request, or it opens a second connection pool and
    calls app.listen() inside a serverless runtime that has nothing to listen on.
    Either way the API returns FUNCTION_INVOCATION_FAILED, which is exactly what
    it did in production.
@@ -132,6 +131,11 @@ const isEntryPoint =
   process.argv[1] && path.resolve(process.argv[1]) === __filename;
 
 if (isEntryPoint) {
+  // --watch restarts the process on every save; without this the old pool is
+  // left holding connections until Postgres times them out.
+  for (const sig of ["SIGINT", "SIGTERM"]) {
+    process.on(sig, () => { closeDb().finally(() => process.exit(0)); });
+  }
   start().catch((err) => {
     console.error("Failed to start:", err);
     process.exit(1);

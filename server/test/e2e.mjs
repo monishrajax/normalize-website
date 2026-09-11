@@ -1,13 +1,14 @@
-/* End-to-end test of the running stack: an in-memory MongoDB, the real Express
+/* End-to-end test of the running stack: a throwaway Postgres, the real Express
    server as a child process, and real Razorpay test-mode API calls.
 
    Run with:  npm test          (from server/)
 
-   It needs no local MongoDB and moves no real money — test-mode keys only.
+   It moves no real money — test-mode keys only — and the database it creates
+   is deleted when the run finishes.
 
    Credentials come from server/.env and are never written into this file: a
    key committed to the repo is a key published to everyone who can read it. */
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { startTestPostgres } from "./pg-harness.mjs";
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 
@@ -40,13 +41,11 @@ const check = (label, ok, detail) => {
   if (!ok) failures++;
 };
 
-const mongo = await MongoMemoryServer.create();
-const uri = mongo.getUri("normalize");
-console.log("In-memory MongoDB up.\n");
+const pg = await startTestPostgres();
 
 const env = {
   ...process.env,
-  MONGODB_URI: uri,
+  DATABASE_URL: pg.url,
   PORT: "5099",
   NODE_ENV: "development",
   CLIENT_ORIGIN: "http://localhost:5173",
@@ -82,7 +81,7 @@ const post = async (p, b, h = {}) => {
 try {
   console.log("\n=== 1. Catalogue ===");
   const all = await get("/api/products");
-  check("12 products served from MongoDB", all.body.products?.length === 12, `${all.body.products?.length} returned`);
+  check("12 products served from Postgres", all.body.products?.length === 12, `${all.body.products?.length} returned`);
   const tote = all.body.products.find((p) => p.slug === "butterfly-tote");
   check("launch piece is sellable", tote?.isSellable === true, `${tote?.name} ₹${tote?.price}`);
   check("only the launch piece is sellable", all.body.products.filter((p) => p.isSellable).length === 1);
@@ -181,7 +180,7 @@ try {
   check("malformed AWB refused", (await get("/api/track?awb=%20%20")).status === 400);
 } finally {
   server.kill();
-  await mongo.stop();
+  await pg.stop();
 }
 
 console.log(failures ? `\n${failures} CHECK(S) FAILED\n` : "\nAll checks passed.\n");
