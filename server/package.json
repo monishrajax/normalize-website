@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.js",
     "start": "node src/index.js",
+    "migrate": "node --env-file-if-exists=.env src/migrate.js",
     "seed": "node --env-file=.env src/seed.js",
     "test": "node --env-file-if-exists=.env test/e2e.mjs",
     "dev:memory": "node --env-file-if-exists=.env test/dev-memory-db.mjs"

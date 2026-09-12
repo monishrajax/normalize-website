@@ -31,9 +31,11 @@ You need a Postgres connection string in `DATABASE_URL`. Two easy options:
 Create the tables once, before seeding:
 
 ```bash
-psql "$DATABASE_URL" -f server/sql/001_init.sql
+npm run migrate --prefix server
 ```
 
+That applies `server/sql/001_init.sql` and reports whether both tables exist and
+RLS is on. It is idempotent — safe to re-run, and it will not touch seeded data.
 On Supabase you can paste that file into the SQL editor instead.
 
 Load the catalogue:
