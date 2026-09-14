@@ -71,7 +71,15 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
             #header-coin-slot is the dock the launch canvas's WebGL coin arcs
             into on scroll; see LaunchCanvas. */}
         <a href="#top" className="flex shrink-0 items-center gap-2.5" aria-label="Normalize — home">
-          <span id="header-coin-slot" className="hidden sm:inline-block">
+          {/* The chassis the launch coin is REPARENTED into at the end of the
+              toss. A real clipped DOM boundary, not a numeric clamp — the
+              canvas physically cannot overflow the header, however the scroll
+              maths behaves. The CSS coin sits inside until the WebGL one
+              arrives and replaces it. */}
+          <span
+            id="header-coin-slot"
+            className="relative hidden h-[50px] w-[50px] shrink-0 overflow-hidden sm:inline-block"
+          >
             <Coin size="sm" />
           </span>
           <span className="metallic-text wordmark text-[13px] tracking-[0.1em] sm:text-lg sm:tracking-[0.2em]">
