@@ -79,7 +79,17 @@ export function createApp() {
   // Never leak a stack trace or a driver message to the browser.
   app.use((err, req, res, next) => {
     console.error("Unhandled error:", err);
-    res.status(err.status || 500).json({ error: "Something went wrong. Please try again." });
+    const body = { error: "Something went wrong. Please try again." };
+
+    /* TEMPORARY DIAGNOSTIC — remove once the checkout failure is understood.
+       Vercel's runtime logs are the proper home for this, but without access to
+       them a 500 is indistinguishable from any other 500, and we have now spent
+       several deploys guessing. This returns only `err.message` — our own
+       strings, or an upstream API's description — never a stack trace. */
+    if (process.env.EXPOSE_ERROR_DETAIL === "true") {
+      body.detail = String(err?.message || err).slice(0, 300);
+    }
+    res.status(err.status || 500).json(body);
   });
 
   return app;
