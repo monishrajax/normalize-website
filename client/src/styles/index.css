@@ -136,6 +136,152 @@
   .coin-md { width: 56px; height: 56px; }
   .coin-lg { width: 168px; height: 168px; }
 
+  /* ---------- THE STAGE ----------
+     The opening screen is not a coin on a background. It is six transparent
+     layers stacked into a lit stage, and the double blur in layers 5a/5b is
+     what makes the frame read as a macro PHOTOGRAPH rather than a web page —
+     real optical falloff, not a drawn vignette. Paint order is back to front. */
+  .stage {
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--color-cream);
+    --lens-r: 220px;
+    --lens-x: 50%;
+    --lens-y: 40%;
+    --lx: 52%;
+    --ly: 40%;
+  }
+
+  /* 1 — Crest echo: texture you feel before you notice it. */
+  .stage-echo {
+    position: absolute; inset: 0; z-index: 0;
+    background: center/cover no-repeat url("/assets/coin-front.webp");
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  /* 2 — Crest lens: the SAME artwork at full strength, revealed only inside a
+     feathered circle that follows the pointer. Moving the cursor polishes a
+     bright window through the faint layer below. */
+  .stage-lens {
+    position: absolute; inset: 0; z-index: 1;
+    background: center/cover no-repeat url("/assets/coin-front.webp");
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(circle var(--lens-r) at var(--lens-x) var(--lens-y),
+                                        #000 52%, transparent 98%);
+    mask-image: radial-gradient(circle var(--lens-r) at var(--lens-x) var(--lens-y),
+                                #000 52%, transparent 98%);
+  }
+
+  /* 3 — the coin canvas mounts here, z-index 1..2 */
+  .stage-coin { position: absolute; inset: 0; z-index: 2; }
+
+  /* 4 — Macro light: as if you were moving the lamp, not the page. */
+  .stage-light {
+    position: absolute; inset: 0; z-index: 2;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    background: radial-gradient(46vmin circle at var(--lx) var(--ly),
+                                rgba(255, 242, 204, 0.5), rgba(255, 242, 204, 0) 62%);
+  }
+
+  /* 5 — Depth of field. Two stacked backdrop blurs, each masked radially from
+     the coin's optical centre so the middle stays sharp and focus falls away
+     toward the frame. THIS is the layer that sells the macro lens. */
+  .stage-dof, .stage-dof2 {
+    position: absolute; inset: 0; z-index: 3;
+    pointer-events: none;
+  }
+  .stage-dof {
+    -webkit-backdrop-filter: blur(7px);
+    backdrop-filter: blur(7px);
+    -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent 30%,
+      rgba(0,0,0,.12) 42%, rgba(0,0,0,.38) 54%, rgba(0,0,0,.72) 66%, #000 80%);
+    mask-image: radial-gradient(circle at 50% 46%, transparent 30%,
+      rgba(0,0,0,.12) 42%, rgba(0,0,0,.38) 54%, rgba(0,0,0,.72) 66%, #000 80%);
+  }
+  .stage-dof2 {
+    -webkit-backdrop-filter: blur(13px);
+    backdrop-filter: blur(13px);
+    -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent 52%,
+      rgba(0,0,0,.30) 66%, rgba(0,0,0,.70) 80%, #000 94%);
+    mask-image: radial-gradient(circle at 50% 46%, transparent 52%,
+      rgba(0,0,0,.30) 66%, rgba(0,0,0,.70) 80%, #000 94%);
+  }
+
+  /* 6 — Grain. A large tile at low opacity so the repeat never reads as a
+     grid, and static, so it costs nothing per frame. */
+  .stage-grain {
+    position: absolute; inset: 0; z-index: 5;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-repeat: repeat;
+    background-size: 400px 400px;
+  }
+
+  /* The lens vignette, above all six. */
+  .stage::after {
+    content: "";
+    position: absolute; inset: 0; z-index: 6;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 46%, transparent 42%, rgba(21,18,16,.28) 78%, rgba(21,18,16,.52) 100%);
+  }
+
+  @media (max-width: 768px) {
+    .stage { --lens-r: 140px; }
+  }
+
+  /* ---------- Hotspots ---------- */
+  .hs { position: absolute; z-index: 9; width: 0; height: 0; }
+
+  /* The gold bead where the branch meets the coin. */
+  .hs-anchor {
+    position: absolute; left: -5.5px; top: -5.5px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #fff7db 0%, var(--color-gold) 55%, #3a2a12 100%);
+    box-shadow: 0 0 0 3px rgba(21,18,16,.35), 0 0 14px 4px rgba(214,175,55,.45);
+  }
+
+  .hs-branch {
+    position: absolute; top: 0; left: 0;
+    transform-origin: left center;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* Branches draw themselves in; the dash length is measured per path. */
+  .hs-branch path {
+    stroke-dashoffset: var(--dash);
+    transition: stroke-dashoffset .95s cubic-bezier(.15,.9,.25,1);
+  }
+  .hs-grown .hs-branch path { stroke-dashoffset: 0; }
+
+  /* Label: Archivo Expanded with a STATIC metallic fill. An animated sweep made
+     individual glyphs read light and dark unevenly and the word looked
+     detached from the branch. */
+  .hs-node {
+    position: absolute;
+    white-space: nowrap;
+    font-family: var(--font-brand);
+    font-stretch: 125%;
+    font-weight: 700;
+    font-size: 21px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    background: linear-gradient(105deg, #5a4415, #e8d391 34%, #caa649 56%, #7c5f28 82%, #e8d391);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0;
+    transform: translate(var(--nx), var(--ny)) translateY(8px);
+    transition: opacity .6s var(--ease-out) .5s, transform .6s var(--ease-out) .5s;
+  }
+  .hs-grown .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)); }
+
+  @media (max-width: 768px) { .hs-node { font-size: 18px; } }
+
   /* ---------- Full-page canvas reveal ----------
      Rule 2: every secondary surface is a full-viewport canvas, never a drawer
      or a popup. The reveal is a liquid clip-path — an ellipse that swells from
@@ -321,6 +467,10 @@
   .canvas-closed .canvas-body { transform: none; }
 
   .branch-path { transition: none; stroke-dashoffset: 0; }
+  /* Non-negotiable 8: reduced motion kills the glint, the growth and the toss.
+     The branches must still be VISIBLE — they are navigation, not decoration. */
+  .hs-branch path { transition: none; stroke-dashoffset: 0; }
+  .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)); transition: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bag-catch { animation: none; }
 }
