@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Panel from "./Panel";
 import { money } from "../lib/api";
+import { StarIcon } from "./icons";
 import { useCart } from "../context/CartContext";
 
 const ACCORDIONS = [
@@ -92,10 +93,7 @@ export default function ProductPanel({ product, onClose }) {
               aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
               className="grid min-h-11 w-12 place-items-center border border-line transition-colors hover:border-ink"
             >
-              <svg viewBox="0 0 24 24" strokeWidth="1.4" fill={wished ? "currentColor" : "none"}
-                   stroke="currentColor" className={`h-4 w-4 ${wished ? "text-gold-dark" : "text-ink"}`}>
-                <path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2.2 0 3.7 1.3 6 3.8C14.3 5.3 15.8 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />
-              </svg>
+              <StarIcon filled={wished} className={`h-4 w-4 ${wished ? "text-gold-dark" : "text-ink"}`} />
             </button>
           </div>
 

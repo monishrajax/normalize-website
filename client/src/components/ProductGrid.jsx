@@ -13,7 +13,7 @@ export default function ProductGrid({ products, loading, error, onSelect }) {
     // Skeletons hold the grid's shape so the page doesn't jump when the real
     // products arrive.
     return (
-      <div className="grid grid-cols-2 gap-x-5 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-0 border-t border-l border-line/60 md:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="animate-pulse">
             <div className="aspect-4/5 bg-cream-dark" />
@@ -36,7 +36,7 @@ export default function ProductGrid({ products, loading, error, onSelect }) {
     <div
       ref={gridRef}
       key={products.map((p) => p.id).join(",")}
-      className="grid grid-cols-2 gap-x-5 gap-y-10 md:grid-cols-3 lg:grid-cols-4"
+      className="grid grid-cols-2 gap-0 border-t border-l border-line/60 md:grid-cols-3 lg:grid-cols-4"
     >
       {products.map((p) => (
         <ProductCard key={p.id} product={p} onSelect={onSelect} />

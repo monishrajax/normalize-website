@@ -1,20 +1,28 @@
 import { money } from "../lib/api";
 import { useCart } from "../context/CartContext";
+import { StarIcon } from "./icons";
 
-/* .reveal is picked up by useReveal on the grid — cards stagger up into
-   view rather than all appearing at once. */
+/* One cell of the catalogue grid.
+
+   The grid is edge to edge with no gutters, so the cell carries its own
+   hairline on the right and bottom — that is what draws the lattice. Text sits
+   inside the cell beneath the image rather than floating under a card, which is
+   what stops a gutterless grid reading as a wall of photographs.
+
+   .reveal is picked up by useReveal on the grid: cards stagger up into view
+   rather than all appearing at once. */
 export default function ProductCard({ product, onSelect }) {
   const { wishlist, toggleWishlist } = useCart();
-  const wished = wishlist.includes(product.id);
+  const saved = wishlist.includes(product.id);
 
   return (
-    <article className="reveal group relative">
+    <article className="reveal group relative border-r border-b border-line/60 bg-white-warm">
       <button
         onClick={() => onSelect(product)}
         className="block w-full text-left"
         aria-label={`View ${product.name}`}
       >
-        <div className="relative aspect-4/5 overflow-hidden bg-cream-dark">
+        <div className="relative aspect-4/5 overflow-hidden bg-cream-dark/25">
           {product.image ? (
             <img
               src={product.image}
@@ -43,24 +51,20 @@ export default function ProductCard({ product, onSelect }) {
           )}
         </div>
 
-        <div className="mt-3 flex items-baseline justify-between gap-3">
+        <div className="px-4 pt-4 pb-6 md:px-5">
           <h3 className="text-xs tracking-[0.08em] text-ink uppercase">{product.name}</h3>
-          <p className="shrink-0 text-xs text-muted tabular-nums">{money(product.price)}</p>
+          <p className="mt-1.5 text-xs text-muted tabular-nums">{money(product.price)}</p>
         </div>
       </button>
 
       <button
         onClick={() => toggleWishlist(product.id)}
-        aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-        aria-pressed={wished}
-        className="absolute top-2 right-2 grid h-11 w-11 place-items-center rounded-full bg-cream/85
-                   backdrop-blur-sm transition-transform duration-300 ease-(--ease-out) hover:scale-110"
+        aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
+        aria-pressed={saved}
+        className="absolute top-2 right-2 grid h-11 w-11 place-items-center
+                   transition-transform duration-300 ease-(--ease-out) hover:scale-110"
       >
-        <svg viewBox="0 0 24 24" strokeWidth="1.4"
-             fill={wished ? "currentColor" : "none"} stroke="currentColor"
-             className={`h-4 w-4 ${wished ? "text-gold-dark" : "text-ink"}`}>
-          <path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2.2 0 3.7 1.3 6 3.8C14.3 5.3 15.8 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />
-        </svg>
+        <StarIcon filled={saved} className={`h-[18px] w-[18px] ${saved ? "text-gold-dark" : "text-ink"}`} />
       </button>
     </article>
   );

@@ -71,12 +71,17 @@ export default function ProductsPanel({
         {loading ? "Loading…" : `${products.length} ${products.length === 1 ? "piece" : "pieces"}`}
       </p>
 
-      <ProductGrid
-        products={products}
-        loading={loading}
-        error={error}
-        onSelect={onSelect}
-      />
+      {/* Full-bleed: the grid escapes the panel's reading measure and runs to
+          both edges of the viewport, which is what makes a gutterless lattice
+          read as a catalogue rather than a boxed-in widget. */}
+      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
+        <ProductGrid
+          products={products}
+          loading={loading}
+          error={error}
+          onSelect={onSelect}
+        />
+      </div>
     </Panel>
   );
 }
