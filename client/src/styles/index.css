@@ -277,10 +277,10 @@
     background-clip: text;
     color: transparent;
     opacity: 0;
-    transform: translate(var(--nx), var(--ny)) translateY(8px);
+    transform: translate(var(--nx), var(--ny)) translateX(var(--clamp, 0px)) translateY(8px);
     transition: opacity .6s var(--ease-out) .5s, transform .6s var(--ease-out) .5s;
   }
-  .hs-grown .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)); }
+  .hs-grown .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)) translateX(var(--clamp, 0px)); }
 
   @media (max-width: 768px) { .hs-node { font-size: 18px; } }
 
@@ -472,7 +472,7 @@
   /* Non-negotiable 8: reduced motion kills the glint, the growth and the toss.
      The branches must still be VISIBLE — they are navigation, not decoration. */
   .hs-branch path { transition: none; stroke-dashoffset: 0; }
-  .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)); transition: none; }
+  .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)) translateX(var(--clamp, 0px)); transition: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bag-catch { animation: none; }
 }

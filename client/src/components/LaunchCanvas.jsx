@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HOTSPOTS } from "../data/hotspots";
 import { useCart } from "../context/CartContext";
 import Coin from "./Coin";
@@ -237,6 +237,33 @@ export default function LaunchCanvas({ onNavigate }) {
     };
   }, [setLight]);
 
+  /* The brief's --nx offsets are fixed pixels hung off a percentage anchor, so
+     they only clear the viewport above roughly 1090px. Below that "YOUR BAG"
+     runs off the right edge — by 104px at the 769px breakpoint — and the live
+     item count makes it worse as the number grows.
+
+     Rather than re-tune the hand-placed bearings per breakpoint, each label is
+     measured after layout and nudged back inside by however much it overhangs.
+     The branch and its bearing are untouched; only the word moves. */
+  const labelRefs = useRef(new Map());
+  useLayoutEffect(() => {
+    const labels = [...labelRefs.current.values()].filter(Boolean);
+    if (!labels.length) return;
+    const MARGIN = 12;
+    labels.forEach((el) => el.style.setProperty("--clamp", "0px"));
+    // Measure them all before writing, so one correction cannot invalidate the
+    // next one's rectangle.
+    const shifts = labels.map((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.left < MARGIN) return MARGIN - r.left;
+      if (r.right > window.innerWidth - MARGIN) return window.innerWidth - MARGIN - r.right;
+      return 0;
+    });
+    labels.forEach((el, i) => {
+      if (shifts[i]) el.style.setProperty("--clamp", `${Math.round(shifts[i])}px`);
+    });
+  }, [isSmall, grown, badge]);
+
   const place = (h) => (isSmall ? h.mobile : h.desktop);
 
   return (
@@ -310,6 +337,7 @@ export default function LaunchCanvas({ onNavigate }) {
                   type="button"
                   onClick={() => onNavigate(h.target)}
                   aria-label={h.key === "cart" ? `${h.label} (${badge})` : h.label}
+                  ref={(el) => labelRefs.current.set(h.key, el)}
                   className="hs-node pointer-events-auto"
                   style={{ "--nx": `${p.nx}px`, "--ny": `${p.ny}px` }}
                 >
