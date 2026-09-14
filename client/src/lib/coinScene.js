@@ -503,6 +503,11 @@ export function createCoinScene(container, { isSmall = false } = {}) {
   }
   frame = requestAnimationFrame(tick);
 
+  if (import.meta.env?.DEV) {
+    canvas.__probe = { pivot, tiltGroup, rimMaterial, frontMaterial, backMaterial, keyLight, spin,
+      step(rad){ spin.flip = rad; }, tickOnce(){ running = true; tick(); } };
+  }
+
   return {
     setPointer,
     addSpin,
