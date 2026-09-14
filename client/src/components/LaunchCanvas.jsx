@@ -246,7 +246,7 @@ export default function LaunchCanvas({ onNavigate }) {
      measured after layout and nudged back inside by however much it overhangs.
      The branch and its bearing are untouched; only the word moves. */
   const labelRefs = useRef(new Map());
-  useLayoutEffect(() => {
+  const clampLabels = useCallback(() => {
     const labels = [...labelRefs.current.values()].filter(Boolean);
     if (!labels.length) return;
     const MARGIN = 12;
@@ -262,7 +262,18 @@ export default function LaunchCanvas({ onNavigate }) {
     labels.forEach((el, i) => {
       if (shifts[i]) el.style.setProperty("--clamp", `${Math.round(shifts[i])}px`);
     });
-  }, [isSmall, grown, badge]);
+  }, []);
+
+  useLayoutEffect(() => {
+    clampLabels();
+    /* Re-measure once the webfont lands. Archivo Expanded is materially wider
+       than the fallback stack, so a label measured before it loads fits, then
+       grows past the edge when it swaps in — which is exactly how "OUR STORY"
+       escaped the viewport on a 375px screen. */
+    document.fonts?.ready.then(clampLabels).catch(() => {});
+    window.addEventListener("resize", clampLabels);
+    return () => window.removeEventListener("resize", clampLabels);
+  }, [clampLabels, isSmall, grown, badge]);
 
   const place = (h) => (isSmall ? h.mobile : h.desktop);
 

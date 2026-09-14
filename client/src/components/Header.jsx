@@ -18,14 +18,19 @@ function Icon({ path, className = "" }) {
 const ACTION =
   "grid h-11 min-w-11 grid-flow-col place-items-center gap-1.5 text-muted transition-colors hover:text-ink";
 
-function Count({ n, tone = "" }) {
-  /* Always a badge on the icon, at every width. Letting it fall back into the
-     flow at lg pushed it onto a second line under the word. */
+function Count({ n, tone = "", nudge = 0 }) {
+  /* The number sits INSIDE the icon rather than beside it — no brackets, no
+     extra width. Each glyph is centred on the icon's own visual mass, which is
+     not its bounding-box centre: a heart carries its weight high, a bag low.
+     Hence the per-icon nudge. */
   return (
     <span
-      className={`absolute -top-1 -right-2 text-[9px] leading-none tabular-nums ${tone}`}
+      aria-hidden="true"
+      className={`pointer-events-none absolute inset-0 grid place-items-center
+                  text-[9px] leading-none font-semibold tabular-nums ${tone}`}
+      style={{ transform: `translateY(${nudge}px)` }}
     >
-      ({n})
+      {n}
     </span>
   );
 }
@@ -97,7 +102,7 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
           <button onClick={onOpenWishlist} aria-label={`Wishlist (${wishlist.length})`} className={ACTION}>
             <span className="relative grid place-items-center">
               <Icon path={<path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2.2 0 3.7 1.3 6 3.8C14.3 5.3 15.8 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />} />
-              <Count n={wishlist.length} />
+              <Count n={wishlist.length} nudge={-1} />
             </span>
             <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">Wishlist</span>
           </button>
@@ -107,7 +112,7 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
                 than the button, so the artwork aims at the bag, not the label. */}
             <span ref={bagIconRef} className="relative grid place-items-center">
               <Icon path={<><path d="M6 8h12l-1 12H7L6 8z" /><path d="M9 8V6a3 3 0 016 0v2" /></>} />
-              <Count n={badge} tone={badge > 0 ? "text-gold-dark" : ""} />
+              <Count n={badge} tone={badge > 0 ? "text-gold-dark" : ""} nudge={2} />
             </span>
             <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">Bag</span>
           </button>
