@@ -235,6 +235,20 @@
     .stage { --lens-r: 140px; }
   }
 
+  /* Escape the panel's reading measure so the grid runs edge to edge.
+
+     Cancelling the panel's own padding, NOT calc(50% - 50vw): viewport units
+     include the scrollbar while percentages do not, so the vw version overhangs
+     by the scrollbar width and leaves the panel with a few pixels of horizontal
+     overflow — a stray sideways scrollbar on a catalogue page. Matching the
+     padding is exact and cannot drift by a scrollbar. */
+  .full-bleed {
+    margin-inline: -1.5rem;            /* the panel's px-6 */
+  }
+  @media (min-width: 768px) {
+    .full-bleed { margin-inline: -2rem; }   /* the panel's md:px-8 */
+  }
+
   /* ---------- Hotspots ---------- */
   .hs { position: absolute; z-index: 9; width: 0; height: 0; }
 

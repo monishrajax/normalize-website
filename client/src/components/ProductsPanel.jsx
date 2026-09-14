@@ -74,7 +74,7 @@ export default function ProductsPanel({
       {/* Full-bleed: the grid escapes the panel's reading measure and runs to
           both edges of the viewport, which is what makes a gutterless lattice
           read as a catalogue rather than a boxed-in widget. */}
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
+      <div className="full-bleed">
         <ProductGrid
           products={products}
           loading={loading}
