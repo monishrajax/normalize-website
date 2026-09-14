@@ -466,10 +466,19 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     tiltGroup.rotation.y = tilt.x * TILT_RADIANS;
     tiltGroup.rotation.x = tilt.y * TILT_RADIANS;
 
+    /* ---- Face brightness follows the coin's own rotation ----
+       Blinding flash face-on, deep shadow at profile. The cubic makes the
+       falloff feel physical rather than linear. This is the BASE state and it
+       applies always — the glint below only adds to it. */
+    const face = Math.abs(Math.cos(pivot.rotation.y)) ** 3;
+    keyLight.intensity = 1.1 * (0.35 + 0.65 * face);
+
     /* ---- The idle glint ----
        A grazing streak rakes across the face, then the key drifts slowly
-       between sweeps. Any pointer input takes over instantly and the sweep
-       stays out of the way for USER_PAUSE_MS. */
+       between sweeps. During the streak the key is driven to an absolute
+       1.1 -> 3.7; outside it the rotation curve above stands. Any pointer
+       input takes over instantly and the sweep stays out of the way for
+       USER_PAUSE_MS, so the automatic motion never fights the user. */
     let glint = 0;
     const quiet = now - sheen.lastUser > USER_PAUSE_MS;
     if (quiet && !reduced) {
@@ -489,24 +498,17 @@ export function createCoinScene(container, { isSmall = false } = {}) {
       }
     }
 
-    /* ---- Face brightness follows the coin's own rotation ----
-       Blinding flash face-on, deep shadow at profile, and the RIM is left
-       alone so the milled edge keeps its shine right through the turn. */
-    const face = Math.abs(Math.cos(pivot.rotation.y)) ** 3;
+    /* Only the two FACE materials are driven. The rim is left alone so the
+       milled edge keeps its shine right through the turn — if the rim darkens
+       with the faces the whole effect collapses into a crossfade. */
     const env = BASE_ENV_FACE * (SHADOW_FLOOR + FLASH_GAIN * face) + glint;
     frontMaterial.envMapIntensity = env;
     backMaterial.envMapIntensity = env;
-    if (!quiet || reduced) keyLight.intensity = 1.1 * (0.35 + 0.65 * face);
 
     renderer.render(scene, camera);
     frame = requestAnimationFrame(tick);
   }
   frame = requestAnimationFrame(tick);
-
-  if (import.meta.env?.DEV) {
-    canvas.__probe = { pivot, tiltGroup, rimMaterial, frontMaterial, backMaterial, keyLight, spin,
-      step(rad){ spin.flip = rad; }, tickOnce(){ running = true; tick(); } };
-  }
 
   return {
     setPointer,
