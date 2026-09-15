@@ -275,7 +275,32 @@ export default function LaunchCanvas({ onNavigate }) {
     return () => window.removeEventListener("resize", clampLabels);
   }, [clampLabels, isSmall, grown, badge]);
 
-  const place = (h) => (isSmall ? h.mobile : h.desktop);
+  /* Where the label sits relative to the branch it belongs to.
+
+     --nx/--ny land exactly on the branch TIP, so anchoring the label's top-left
+     corner there makes the word grow back across the twigs it is supposed to
+     hang off. The label has to be pushed a little further along the bearing
+     (so it does not touch) and then aligned so its NEAR edge is the one at the
+     tip: right-aligned for a branch pointing left, centred for one pointing
+     straight up or down, left-aligned for one pointing right. */
+  const place = (h) => {
+    const p = isSmall ? h.mobile : h.desktop;
+    const rad = (p.bang * Math.PI) / 180;
+    const dx = Math.cos(rad);
+    const dy = Math.sin(rad);
+    const GAP = 16;                       // clear air between twig-tip and word
+
+    let align = "0";                      // branch points right: word runs right
+    if (dx < -0.25) align = "-100%";      // points left: word ends at the tip
+    else if (Math.abs(dx) <= 0.25) align = "-50%";   // near-vertical: centre it
+
+    return {
+      ...p,
+      nx: p.nx + dx * GAP,
+      ny: p.ny + dy * GAP,
+      align,
+    };
+  };
 
   return (
     /* No fixed height and no overflow clip on the SECTION: ScrollTrigger pins
@@ -300,17 +325,21 @@ export default function LaunchCanvas({ onNavigate }) {
         <div className="stage-grain" aria-hidden="true" style={{ backgroundImage: GRAIN }} />
 
         <div ref={hotspotLayerRef} className="pointer-events-none absolute inset-0 z-[9]">
-          {/* One gradient per branch — burnished, to polished, to burnished.
-              The x1/y1/x2/y2 must be explicit or the sweep has nothing to run
-              along. */}
+          {/* One gradient per branch: burnished -> polished -> burnished along
+              the stroke, lifted out of the muddy end of the range. The dark
+              stops used to be dark enough that a thin twig read as brown
+              pencil rather than metal. x1/y1/x2/y2 must stay explicit —
+              without an axis the gradient has nothing to run along. */}
           <svg width="0" height="0" aria-hidden="true" className="absolute">
             <defs>
               {HOTSPOTS.map((h) => (
                 <linearGradient key={h.gradientId} id={h.gradientId} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stopColor="#6b5120" />
-                  <stop offset=".38" stopColor="#f6e6a8" />
-                  <stop offset=".62" stopColor="#caa649" />
-                  <stop offset="1" stopColor="#4a370f" />
+                  <stop offset="0" stopColor="#9a7726" />
+                  <stop offset=".22" stopColor="#e4c65f" />
+                  <stop offset=".42" stopColor="#fff6d8" />
+                  <stop offset=".62" stopColor="#e8d391" />
+                  <stop offset=".82" stopColor="#caa649" />
+                  <stop offset="1" stopColor="#8a6a1c" />
                 </linearGradient>
               ))}
             </defs>
@@ -350,7 +379,7 @@ export default function LaunchCanvas({ onNavigate }) {
                   aria-label={h.key === "cart" ? `${h.label} (${badge})` : h.label}
                   ref={(el) => labelRefs.current.set(h.key, el)}
                   className="hs-node pointer-events-auto"
-                  style={{ "--nx": `${p.nx}px`, "--ny": `${p.ny}px` }}
+                  style={{ "--nx": `${p.nx}px`, "--ny": `${p.ny}px`, "--align": p.align }}
                 >
                   {h.label}
                   {h.key === "cart" && ` (${badge})`}

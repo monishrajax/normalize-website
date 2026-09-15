@@ -291,15 +291,32 @@
     font-size: 21px;
     letter-spacing: .1em;
     text-transform: uppercase;
-    background: linear-gradient(105deg, #5a4415, #e8d391 34%, #caa649 56%, #7c5f28 82%, #e8d391);
+    /* Silver into gold, top to bottom.
+
+       The stage ground is cream (#f4ede0), so a pale silver top half simply
+       disappears into it — the first attempt at this washed the word out
+       entirely. Real metallic type on a light ground works the other way
+       round: mostly mid-to-dark, with a NARROW bright band that reads as a
+       specular highlight. Hence the tight silver stop at 20% and the tight
+       gold one at 50%, with everything either side deliberately darker. */
+    background: linear-gradient(
+      180deg,
+      #6f6f72 0%,
+      #c2c2c6 20%,
+      #8e8878 33%,
+      #f0d886 50%,
+      #caa649 66%,
+      #8a6a1c 84%,
+      #5d4713 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     opacity: 0;
-    transform: translate(var(--nx), var(--ny)) translateY(8px);
+    transform: translate(var(--nx), var(--ny)) translateX(var(--align, 0)) translateY(8px);
     transition: opacity .6s var(--ease-out) .5s, transform .6s var(--ease-out) .5s;
   }
-  .hs-grown .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)); }
+  .hs-grown .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)) translateX(var(--align, 0)); }
 
   @media (max-width: 768px) { .hs-node { font-size: 18px; } }
 
@@ -491,7 +508,7 @@
   /* Non-negotiable 8: reduced motion kills the glint, the growth and the toss.
      The branches must still be VISIBLE — they are navigation, not decoration. */
   .hs-branch path { transition: none; stroke-dashoffset: 0; }
-  .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)); transition: none; }
+  .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)) translateX(var(--align, 0)); transition: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bag-catch { animation: none; }
 }

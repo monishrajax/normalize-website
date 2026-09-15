@@ -9,10 +9,14 @@ const CATEGORIES = [
   { key: "accessories", label: "Accessories" },
 ];
 
+/* The arrow is its own glyph, not part of the label, so it can be set larger
+   than the wide-tracked uppercase it sits beside. At matching size a ↑ is
+   almost invisible against 11px letterspaced caps — it reads as a speck of
+   punctuation rather than the thing that tells you which way the prices run. */
 const SORTS = [
   { value: "featured", label: "Featured" },
-  { value: "price-asc", label: "Price ↑" },
-  { value: "price-desc", label: "Price ↓" },
+  { value: "price-asc", label: "Price", arrow: "↑" },
+  { value: "price-desc", label: "Price", arrow: "↓" },
   { value: "newest", label: "Newest" },
 ];
 
@@ -59,9 +63,13 @@ export default function ProductsPanel({
               key={s.value}
               onClick={() => onSortChange(s.value)}
               aria-pressed={sort === s.value}
-              className={pill(sort === s.value)}
+              aria-label={s.arrow ? `Sort by price, ${s.value === "price-asc" ? "low to high" : "high to low"}` : `Sort by ${s.label}`}
+              className={`${pill(sort === s.value)} grid-flow-col gap-1`}
             >
               {s.label}
+              {s.arrow && (
+                <span aria-hidden="true" className="text-[15px] leading-none">{s.arrow}</span>
+              )}
             </button>
           ))}
         </div>
