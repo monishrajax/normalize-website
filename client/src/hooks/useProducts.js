@@ -6,9 +6,25 @@ import { api } from "../lib/api";
    prices in the serverless functions, and the two had already drifted. */
 export function useCatalogue({ category, sort }) {
   const [products, setProducts] = useState([]);
+  /* The UNFILTERED catalogue. The cart and the wishlist store ids, and they
+     resolve those ids back to products for name, price and image — so they must
+     look them up in the whole catalogue, not in whatever the grid is currently
+     filtered to. Joining against the filtered list makes a saved item vanish
+     the moment you browse a different category, and silently empties the bag
+     with it. */
+  const [allProducts, setAllProducts] = useState([]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Fetched once, unfiltered, and never re-fetched on a filter change.
+  useEffect(() => {
+    let cancelled = false;
+    api.getProducts()
+      .then((data) => { if (!cancelled) setAllProducts(data.products); })
+      .catch(() => { /* the grid still works; identity lookups degrade */ });
+    return () => { cancelled = true; };
+  }, []);
 
   // Config is fetched once; it does not depend on the filters.
   useEffect(() => {
@@ -38,5 +54,5 @@ export function useCatalogue({ category, sort }) {
     return () => { cancelled = true; };
   }, [category, sort]);
 
-  return { products, config, loading, error };
+  return { products, allProducts, config, loading, error };
 }

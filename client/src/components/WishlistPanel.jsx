@@ -12,7 +12,7 @@ export default function WishlistPanel({ open, onClose, products, onSelect }) {
         <div className="py-20 text-center">
           <p className="mb-6 font-display text-3xl text-ink">Nothing saved yet.</p>
           <p className="text-sm text-muted">
-            Tap the heart on anything you want to keep an eye on.
+            Tap the star on anything you want to keep an eye on.
           </p>
         </div>
       ) : (

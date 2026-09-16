@@ -25,7 +25,7 @@ const INFO_SECTIONS = new Set(["shipping", "sizeguide", "contact", "track", "sto
 export default function App() {
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("featured");
-  const { products, config, loading, error } = useCatalogue({ category, sort });
+  const { products, allProducts, config, loading, error } = useCatalogue({ category, sort });
 
   /* Exactly one canvas is open at a time. Rule 2 — every secondary surface is
      a full-viewport canvas, so they are all mutually exclusive by nature and
@@ -40,7 +40,7 @@ export default function App() {
   /* Launch mode is a property of the data, not a constant to redeploy: if
      exactly one product is sellable, the site is in launch. Opening the
      catalogue is a database update, and this follows automatically. */
-  const sellable = useMemo(() => products.filter((p) => p.isSellable), [products]);
+  const sellable = useMemo(() => allProducts.filter((p) => p.isSellable), [allProducts]);
   const launchMode = sellable.length === 1;
   const launchProduct = launchMode ? sellable[0] : null;
 
@@ -53,7 +53,7 @@ export default function App() {
   };
 
   return (
-    <CartProvider products={products} config={config}>
+    <CartProvider products={allProducts} config={config}>
       <AnnounceBar config={config} />
 
       <Header
@@ -94,10 +94,13 @@ export default function App() {
         onSelect={(p) => { close(); setSelected(p); }}
       />
       <SearchPanel open={panel === "search"} onClose={close} onSelect={setSelected} />
+      {/* The wishlist stores ids, so it resolves them against the FULL
+          catalogue — filtering the grid to a category must not hide saved
+          items that happen to live in another one. */}
       <WishlistPanel
         open={panel === "wishlist"}
         onClose={close}
-        products={products}
+        products={allProducts}
         onSelect={setSelected}
       />
       <CartPanel
