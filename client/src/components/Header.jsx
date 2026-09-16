@@ -19,19 +19,21 @@ function Icon({ path, className = "" }) {
 const ACTION =
   "grid h-11 min-w-11 grid-flow-col place-items-center gap-1.5 text-muted transition-colors hover:text-ink";
 
-function Count({ n, tone = "", nudge = 0 }) {
-  /* The number sits INSIDE the icon rather than beside it — no brackets, no
-     extra width. Each glyph is centred on the icon's own visual mass, which is
-     not its bounding-box centre: a heart carries its weight high, a bag low.
-     Hence the per-icon nudge. */
+function Count({ n }) {
+  /* A badge bubble on the icon's top corner, not a glyph inside the shape.
+     Hidden at zero: an empty bubble is visual noise, and the count is still
+     announced through the button's aria-label either way, so nothing is lost
+     to a screen reader. min-w plus padding lets it grow into a pill for two
+     digits rather than clipping. */
+  if (!n) return null;
   return (
     <span
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 grid place-items-center
-                  text-[9px] leading-none font-semibold tabular-nums ${tone}`}
-      style={{ transform: `translateY(${nudge}px)` }}
+      className="absolute -top-1.5 -right-2 grid h-[15px] min-w-[15px] place-items-center
+                 rounded-full bg-ink px-[3px] text-[9px] leading-none font-semibold
+                 tabular-nums text-cream"
     >
-      {n}
+      {n > 99 ? "99+" : n}
     </span>
   );
 }
@@ -103,7 +105,7 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
           <button onClick={onOpenWishlist} aria-label={`Wishlist (${wishlist.length})`} className={ACTION}>
             <span className="relative grid place-items-center">
               <Icon path={<path d={STAR_PATH} strokeLinejoin="round" />} />
-              <Count n={wishlist.length} nudge={-1} />
+              <Count n={wishlist.length} />
             </span>
             <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">Wishlist</span>
           </button>
@@ -113,7 +115,7 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
                 than the button, so the artwork aims at the bag, not the label. */}
             <span ref={bagIconRef} className="relative grid place-items-center">
               <Icon path={<><path d="M6 8h12l-1 12H7L6 8z" /><path d="M9 8V6a3 3 0 016 0v2" /></>} />
-              <Count n={badge} tone={badge > 0 ? "text-gold-dark" : ""} nudge={2} />
+              <Count n={badge} />
             </span>
             <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">Bag</span>
           </button>
