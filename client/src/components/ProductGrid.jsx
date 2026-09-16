@@ -39,7 +39,7 @@ export default function ProductGrid({ products, loading, error, onSelect }) {
       className="grid grid-cols-2 gap-0 border-t border-l border-line/60 md:grid-cols-3 lg:grid-cols-4"
     >
       {products.map((p) => (
-        <ProductCard key={p.id} product={p} onSelect={onSelect} />
+        <ProductCard key={p.id} product={p} onSelect={onSelect} reveal />
       ))}
     </div>
   );

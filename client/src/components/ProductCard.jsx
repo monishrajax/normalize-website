@@ -9,14 +9,19 @@ import { StarIcon } from "./icons";
    inside the cell beneath the image rather than floating under a card, which is
    what stops a gutterless grid reading as a wall of photographs.
 
-   .reveal is picked up by useReveal on the grid: cards stagger up into view
-   rather than all appearing at once. */
-export default function ProductCard({ product, onSelect }) {
+   `reveal` is OPT-IN, and deliberately so. The class starts the card at
+   opacity 0 and waits for useReveal's observer to add .reveal-in. A container
+   that renders these cards WITHOUT that hook — the wishlist did exactly this —
+   leaves every card in the DOM at full size, with its content, and permanently
+   invisible. Defaulting to off means a forgetful caller gets a card that
+   appears without a stagger, rather than a panel that looks empty while it is
+   actually holding your saved items. */
+export default function ProductCard({ product, onSelect, reveal = false }) {
   const { wishlist, toggleWishlist } = useCart();
   const saved = wishlist.includes(product.id);
 
   return (
-    <article className="reveal group relative border-r border-b border-line/60 bg-white-warm">
+    <article className={`${reveal ? "reveal " : ""}group relative border-r border-b border-line/60 bg-white-warm`}>
       <button
         onClick={() => onSelect(product)}
         className="block w-full text-left"
