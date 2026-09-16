@@ -130,10 +130,19 @@ export default function CheckoutPanel({ open, onClose }) {
                     onChange={(e) => set(f.name, e.target.value)}
                     /* Indian mobile numbers and PIN codes are fixed-length and
                        digits-only; catching that here saves a courier rejecting
-                       the shipment later. */
+                       the shipment later.
+
+                       inputMode matters as much as the pattern. The PIN field is
+                       type="text", so without it a phone raises the full
+                       alphabetic keyboard for a six-digit number — on the one
+                       form where a typo costs a delivery. type="tel" already
+                       implies a keypad for the phone, but saying it is explicit
+                       keeps the two fields reading the same. */
                     {...(f.name === "phone"   ? { pattern: "[6-9][0-9]{9}", maxLength: 10,
+                                                  inputMode: "numeric",
                                                   title: "10-digit Indian mobile number" } : {})}
                     {...(f.name === "pincode" ? { pattern: "[1-9][0-9]{5}", maxLength: 6,
+                                                  inputMode: "numeric",
                                                   title: "6-digit PIN code" } : {})}
                     className="field"
                   />

@@ -98,6 +98,23 @@ export default function LaunchCanvas({ onNavigate }) {
       const ScrollTrigger = stMod.ScrollTrigger || stMod.default;
       gsap.registerPlugin(ScrollTrigger);
 
+      /* Do not measure anything until the stage has a real size.
+
+         ScrollTrigger's pin bakes the element's measured width and height into
+         its inline style. Measured at zero — a background tab, a collapsed
+         window, mobile chrome mid-settle — it writes `width:0;height:0` and
+         NEVER recovers: a later resize does not undo it, so the coin and the
+         whole stage stay invisible until a reload. Waiting for a non-zero box
+         costs a frame and removes the failure mode entirely. */
+      const hasSize = () => stage.clientWidth > 0 && stage.clientHeight > 0;
+      if (!hasSize()) {
+        await new Promise((resolve) => {
+          const ro = new ResizeObserver(() => { if (hasSize()) { ro.disconnect(); resolve(); } });
+          ro.observe(stage);
+        });
+        if (cancelled) return;
+      }
+
       const scene = createCoinScene(coinLayer, { isSmall: small });
       if (!scene) { setMode("fallback"); return; }   // no WebGL — CSS coin stands in
       sceneRef.current = scene;
@@ -159,8 +176,37 @@ export default function LaunchCanvas({ onNavigate }) {
       };
       stage.addEventListener("touchstart", onFirstTouch, { once: true, passive: true });
 
-      const onResize = () => scene.resize();
-      window.addEventListener("resize", onResize);
+      /* Re-fit the stage when the viewport changes size.
+
+         The stage's box comes from the VIEWPORT — .stage is 100vh and fills its
+         column — and once ScrollTrigger pins it, that measured box is frozen
+         into its inline style. Nothing undoes that on its own: a window resized
+         from 375px to 1280px leaves a 375px stage sitting in a 1280px page
+         until something calls refresh(). So this has to.
+
+         It cannot watch the stage to decide. The stage's size only changes as a
+         RESULT of the refresh below, so an observer on it waits for the effect
+         of the event it is meant to fire and never runs once — which is exactly
+         how that frozen 375px box survived.
+
+         documentElement is a tick source only; the comparison is against the
+         viewport, so a panel opening (which lengthens the document) cannot
+         trigger a refresh. Height alone is ignored on touch, where it usually
+         means mobile chrome sliding away — refreshing a pin mid-scroll over
+         that makes the stage jump under the finger. */
+      const coarse = window.matchMedia("(pointer: coarse)").matches;
+      let lastW = window.innerWidth, lastH = window.innerHeight;
+      const refit = () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        if (!w || !h) return;
+        if (Math.abs(w - lastW) < 2 && (Math.abs(h - lastH) < 2 || coarse)) return;
+        lastW = w; lastH = h;
+        scene.resize();
+        ScrollTrigger.refresh();
+      };
+      window.addEventListener("resize", refit);
+      const ro = new ResizeObserver(refit);
+      ro.observe(document.documentElement);
 
       /* ---- The toss into the header ----
          Over the first 320px the coin arcs up into the header, gaining spin
@@ -222,7 +268,8 @@ export default function LaunchCanvas({ onNavigate }) {
         stage.removeEventListener("pointermove", onMove);
         stage.removeEventListener("touchstart", onFirstTouch);
         if (onOrient) window.removeEventListener("deviceorientation", onOrient);
-        window.removeEventListener("resize", onResize);
+        window.removeEventListener("resize", refit);
+        ro.disconnect();
         breathTween?.kill();
         trigger?.kill();
         scene.dispose();

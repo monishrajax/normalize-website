@@ -90,14 +90,31 @@ export function flyToBag(sourceEl, targetEl, imageSrc) {
     fill: "forwards",
   });
 
-  return animation.finished
-    .catch(() => {})            // a cancelled animation must still settle
-    .then(() => {
-      flier.remove();
-      targetEl.classList.remove("bag-catch");
-      // Reflow so the class re-triggers when two items are added in a row.
-      void targetEl.offsetWidth;
-      targetEl.classList.add("bag-catch");
-      setTimeout(() => targetEl.classList.remove("bag-catch"), 500);
-    });
+  const land = () => {
+    flier.remove();
+    targetEl.classList.remove("bag-catch");
+    // Reflow so the class re-triggers when two items are added in a row.
+    void targetEl.offsetWidth;
+    targetEl.classList.add("bag-catch");
+    setTimeout(() => targetEl.classList.remove("bag-catch"), 500);
+  };
+
+  /* Land exactly once, and never wait forever to do it.
+
+     A document that stops being rendered — a backgrounded tab, a collapsed
+     window — can stall the animation timeline, and `finished` then never
+     settles, not even once the document is visible again. The bag badge is held
+     back until this promise resolves, and that hold is a COUNTER: one stalled
+     flight freezes the count for the rest of the session, so every later add
+     also fails to show up. Racing a timeout costs nothing when the animation
+     behaves — landing late is invisible, where never landing is a permanently
+     wrong number on screen. Timers are throttled in a hidden tab too, but they
+     do still fire, which is the whole point. */
+  let landed = false;
+  const once = () => { if (landed) return; landed = true; land(); };
+
+  return Promise.race([
+    animation.finished.catch(() => {}),   // a cancelled animation must still settle
+    new Promise((resolve) => setTimeout(resolve, 1400)),   // duration + slack
+  ]).then(once);
 }
