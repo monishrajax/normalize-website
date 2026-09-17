@@ -256,7 +256,7 @@
   .hs-anchor {
     position: absolute; left: -5.5px; top: -5.5px;
     width: 11px; height: 11px; border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%, #fff7db 0%, var(--color-gold) 55%, #3a2a12 100%);
+    background: radial-gradient(circle at 40% 35%, #f0cf5a 0%, var(--color-gold) 55%, #3a2a12 100%);
     box-shadow: 0 0 0 3px rgba(21,18,16,.35), 0 0 14px 4px rgba(214,175,55,.45);
   }
 
@@ -298,22 +298,21 @@
     font-size: 21px;
     letter-spacing: .1em;
     text-transform: uppercase;
-    /* Gold, top to bottom — the same metal as the branch it hangs off.
-
-       The stage ground is cream (#f4ede0), so a pale top half simply
-       disappears into it: real metallic type on a light ground is mostly
-       mid-to-dark with ONE narrow bright band that reads as the specular
-       highlight. That band is pale gold, not silver — a grey highlight
-       against gold twigs made the word look like a different material. */
+    /* Gold, top to bottom — the same metal as the branch it hangs off, and
+       every stop stays inside the gold hue. Two earlier versions put a pale
+       band through the word (grey, then cream) as a specular highlight; on
+       the cream ground both read as a silver stripe through the letters. The
+       brightest stop is now the yellowest, so the word can only read as gold.
+       It still runs mid-to-dark towards the bottom, which is what keeps it
+       legible on #f4ede0 — a flat bright gold sinks into the ground. */
     background: linear-gradient(
       180deg,
-      #7a5c17 0%,
-      #b8922f 18%,
-      #f4e2a0 38%,
-      #e2c257 52%,
-      #c39a35 70%,
-      #8a6a1c 88%,
-      #5d4713 100%
+      #8a6a1c 0%,
+      #c9a13a 24%,
+      #ecc74e 44%,
+      #d4ad3c 60%,
+      #a8822a 80%,
+      #6b5015 100%
     );
     -webkit-background-clip: text;
     background-clip: text;

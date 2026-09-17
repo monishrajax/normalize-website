@@ -418,19 +418,22 @@ export default function LaunchCanvas({ onNavigate }) {
 
         <div ref={hotspotLayerRef} className="pointer-events-none absolute inset-0 z-[9]">
           {/* One gradient per branch: burnished -> polished -> burnished along
-              the stroke, lifted out of the muddy end of the range. The dark
-              stops used to be dark enough that a thin twig read as brown
-              pencil rather than metal. x1/y1/x2/y2 must stay explicit —
-              without an axis the gradient has nothing to run along. */}
+              the stroke. Every stop is GOLD. The polished peak used to be a
+              near-white (#fff6d8), which on a thin stroke read as a silver
+              lining down the branch rather than a highlight on gold — the
+              brightest stop is now the yellowest, not the palest. The dark
+              ends stay lifted out of the muddy range, where a thin twig reads
+              as brown pencil. x1/y1/x2/y2 must stay explicit — without an
+              axis the gradient has nothing to run along. */}
           <svg width="0" height="0" aria-hidden="true" className="absolute">
             <defs>
               {HOTSPOTS.map((h) => (
                 <linearGradient key={h.gradientId} id={h.gradientId} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stopColor="#9a7726" />
-                  <stop offset=".22" stopColor="#e4c65f" />
-                  <stop offset=".42" stopColor="#fff6d8" />
-                  <stop offset=".62" stopColor="#e8d391" />
-                  <stop offset=".82" stopColor="#caa649" />
+                  <stop offset="0" stopColor="#8a6a1c" />
+                  <stop offset=".22" stopColor="#c9a13a" />
+                  <stop offset=".42" stopColor="#ecc74e" />
+                  <stop offset=".62" stopColor="#d9b344" />
+                  <stop offset=".82" stopColor="#b8912f" />
                   <stop offset="1" stopColor="#8a6a1c" />
                 </linearGradient>
               ))}
