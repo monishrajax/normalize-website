@@ -6,9 +6,17 @@
    trunk to twig. Never the same path mirrored: three mirrored copies read
    instantly as a template and the whole conceit falls apart.
 
-   `desktop` and `mobile` are the two placements. Below 768px the branches shoot
-   OUTWARD from a smaller coin as a radial halo — do not collapse all three to
-   hx 50%, which stacks them over the artwork and is unreadable.
+   `desktop` and `mobile` are the two placements: `hx`/`hy` is the anchor on
+   the coin's rim, `blen` the reach in px, `bang` the bearing in degrees. That
+   is the whole placement — the label is NOT positioned here. LaunchCanvas
+   derives the tip from `blen` and `bang` and hangs the word off it, so the
+   word cannot drift from the drawing (the old per-branch `nx`/`ny` offsets
+   were that same tip, rounded by hand, plus a gap that left the twig pointing
+   at the word's corner instead of into its end).
+
+   Below 768px the branches shoot OUTWARD from a smaller coin as a radial halo
+   — do not collapse all three to hx 50%, which stacks them over the artwork
+   and is unreadable.
 
    `sproutAt` staggers the three so they arrive in sequence and then STAY. There
    is no scroll staging: the visitor must never have to hunt for the navigation. */
@@ -19,8 +27,8 @@ export const HOTSPOTS = [
     target: "spotlight",
     gradientId: "bm-nav",
     sproutAt: 0.7,
-    desktop: { hx: "36%", hy: "30%", nx: -150, ny: -72, blen: 166, bang: 206 },
-    mobile:  { hx: "50%", hy: "36%", nx: -12, ny: -112, blen: 86, bang: -104 },
+    desktop: { hx: "36%", hy: "30%", blen: 166, bang: 206 },
+    mobile:  { hx: "50%", hy: "36%", blen: 86, bang: -104 },
     paths: [
       {
             "d": "M6,62 C34,60 54,58 76,56",
@@ -78,8 +86,8 @@ export const HOTSPOTS = [
     target: "cart",
     gradientId: "bm-cart",
     sproutAt: 1.0,
-    desktop: { hx: "66%", hy: "44%", nx: 158, ny: -34, blen: 162, bang: -12 },
-    mobile:  { hx: "21%", hy: "59%", nx: -10, ny: 82, blen: 70, bang: 112 },
+    desktop: { hx: "66%", hy: "44%", blen: 162, bang: -12 },
+    mobile:  { hx: "21%", hy: "59%", blen: 70, bang: 112 },
     paths: [
       {
             "d": "M6,64 C30,70 52,72 74,66",
@@ -133,8 +141,8 @@ export const HOTSPOTS = [
     target: "story",
     gradientId: "bm-story",
     sproutAt: 1.3,
-    desktop: { hx: "33%", hy: "72%", nx: -128, ny: 88, blen: 158, bang: 145 },
-    mobile:  { hx: "58%", hy: "66%", nx: 26, ny: 104, blen: 80, bang: 72 },
+    desktop: { hx: "33%", hy: "72%", blen: 158, bang: 145 },
+    mobile:  { hx: "58%", hy: "66%", blen: 80, bang: 72 },
     paths: [
       {
             "d": "M6,58 C28,54 44,52 62,52",

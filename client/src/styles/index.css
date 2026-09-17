@@ -260,8 +260,15 @@
     box-shadow: 0 0 0 3px rgba(21,18,16,.35), 0 0 14px 4px rgba(214,175,55,.45);
   }
 
+  /* The branch box is sized from the same --blen/--bang/--reach the label's
+     transform reads, so the drawing and the word are placed from one set of
+     numbers. --reach (default 1) is how fitLabels shortens a branch whose
+     word would otherwise overhang the viewport. */
   .hs-branch {
     position: absolute; top: 0; left: 0;
+    width: calc(var(--blen) * var(--reach, 1));
+    height: calc(var(--blen) * var(--reach, 1) * 0.62);
+    transform: translateY(-50%) rotate(var(--bang));
     transform-origin: left center;
     pointer-events: none;
     overflow: visible;
@@ -291,32 +298,45 @@
     font-size: 21px;
     letter-spacing: .1em;
     text-transform: uppercase;
-    /* Silver into gold, top to bottom.
+    /* Gold, top to bottom — the same metal as the branch it hangs off.
 
-       The stage ground is cream (#f4ede0), so a pale silver top half simply
-       disappears into it — the first attempt at this washed the word out
-       entirely. Real metallic type on a light ground works the other way
-       round: mostly mid-to-dark, with a NARROW bright band that reads as a
-       specular highlight. Hence the tight silver stop at 20% and the tight
-       gold one at 50%, with everything either side deliberately darker. */
+       The stage ground is cream (#f4ede0), so a pale top half simply
+       disappears into it: real metallic type on a light ground is mostly
+       mid-to-dark with ONE narrow bright band that reads as the specular
+       highlight. That band is pale gold, not silver — a grey highlight
+       against gold twigs made the word look like a different material. */
     background: linear-gradient(
       180deg,
-      #6f6f72 0%,
-      #c2c2c6 20%,
-      #8e8878 33%,
-      #f0d886 50%,
-      #caa649 66%,
-      #8a6a1c 84%,
+      #7a5c17 0%,
+      #b8922f 18%,
+      #f4e2a0 38%,
+      #e2c257 52%,
+      #c39a35 70%,
+      #8a6a1c 88%,
       #5d4713 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     opacity: 0;
-    transform: translate(var(--nx), var(--ny)) translateX(var(--align, 0)) translateY(8px);
+    /* Placement. The first translate walks 0.985·blen along the bearing to the
+       tip (plus 2px of air so the twig's round cap does not sit on the glyph);
+       the second aligns the word so the tip lands on its END, on its mid-line
+       — --ax/--ay are set per branch by place(). The trailing 8px is the
+       entrance rise and is removed once grown. */
+    --tip: calc(var(--blen) * var(--reach, 1) * 0.985 + 2px);
+    transform:
+      translate(calc(var(--tip) * var(--cos)), calc(var(--tip) * var(--sin)))
+      translate(var(--ax, 0%), var(--ay, -50%))
+      translateY(8px);
     transition: opacity .6s var(--ease-out) .5s, transform .6s var(--ease-out) .5s;
   }
-  .hs-grown .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)) translateX(var(--align, 0)); }
+  .hs-grown .hs-node {
+    opacity: 1;
+    transform:
+      translate(calc(var(--tip) * var(--cos)), calc(var(--tip) * var(--sin)))
+      translate(var(--ax, 0%), var(--ay, -50%));
+  }
 
   @media (max-width: 768px) { .hs-node { font-size: 18px; } }
 
@@ -508,7 +528,13 @@
   /* Non-negotiable 8: reduced motion kills the glint, the growth and the toss.
      The branches must still be VISIBLE — they are navigation, not decoration. */
   .hs-branch path { transition: none; stroke-dashoffset: 0; }
-  .hs-node { opacity: 1; transform: translate(var(--nx), var(--ny)) translateX(var(--align, 0)); transition: none; }
+  .hs-node {
+    opacity: 1;
+    transform:
+      translate(calc(var(--tip) * var(--cos)), calc(var(--tip) * var(--sin)))
+      translate(var(--ax, 0%), var(--ay, -50%));
+    transition: none;
+  }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bag-catch { animation: none; }
 }

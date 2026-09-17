@@ -20,6 +20,21 @@ const GRAIN = `url("data:image/svg+xml,${encodeURIComponent(
    </svg>`
 )}")`;
 
+/* Where a branch's tip is, for one breakpoint. Pure, so the layout effect
+   that fits labels and the render that places them cannot disagree.
+   `tip` is the distance along the bearing — see place() for the derivation. */
+/* Air between the twig's round cap and the first glyph. The CSS adds the
+   same 2px inside --tip; keep the two together. */
+const TIP_AIR = 2;
+
+function geometry(h, small) {
+  const p = small ? h.mobile : h.desktop;
+  const rad = (p.bang * Math.PI) / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  const horizontal = Math.abs(cos) >= Math.abs(sin);
+  return { ...p, cos, sin, horizontal, tip: p.blen * 0.985 };
+}
+
 export default function LaunchCanvas({ onNavigate }) {
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
@@ -284,69 +299,99 @@ export default function LaunchCanvas({ onNavigate }) {
     };
   }, [setLight]);
 
-  /* The brief's --nx offsets are fixed pixels hung off a percentage anchor, so
-     they only clear the viewport above roughly 1090px. Below that "YOUR BAG"
-     runs off the right edge — by 104px at the 769px breakpoint — and the live
-     item count makes it worse as the number grows.
+  /* Keep every label on screen WITHOUT letting go of its branch.
 
-     Rather than re-tune the hand-placed bearings per breakpoint, each label is
-     measured after layout and nudged back inside by however much it overhangs.
-     The branch and its bearing are untouched; only the word moves. */
+     A wide label — "YOUR BAG (12)" on a 1024px window — overhangs the right
+     edge. The first version of this slid the word back inside and left the
+     branch where it was, which is exactly how the twig ended up pointing at
+     empty air 40px from the word. The word and the tip have to move together,
+     so the correction is applied to the branch's REACH: a shorter branch puts
+     its tip, and therefore the word hanging off it, further in. The silhouette
+     scales with it, which reads as a slightly smaller branch, not a broken one.
+
+     Reach is floored so a branch can never shrink into a stub; only past that
+     floor does the word slide on its own, and only along the axis where the
+     tip still touches it — a near-vertical branch meets the word's top or
+     bottom EDGE, so sliding the word along that edge keeps them connected.
+
+     NOTHING here reads the label's rectangle. Its transform is transitioned
+     (with a half-second delay, for the entrance), so a rect read right after a
+     write reports where the word WAS — and a fit that measured it applied the
+     same 23px twice, once as reach and again as a slide, and parked the word
+     23px short of its twig. The rect is instead predicted from things that do
+     not animate: the anchor's position, the reach, the alignment rule and the
+     label's own layout width. A zero-width viewport is skipped outright — a
+     fit against a 0px window shoves every label off the left edge, and only a
+     real resize would ever undo it. */
   const labelRefs = useRef(new Map());
-  const clampLabels = useCallback(() => {
-    const labels = [...labelRefs.current.values()].filter(Boolean);
-    if (!labels.length) return;
-    const MARGIN = 12;
-    labels.forEach((el) => el.style.setProperty("--clamp", "0px"));
-    // Measure them all before writing, so one correction cannot invalidate the
-    // next one's rectangle.
-    const shifts = labels.map((el) => {
-      const r = el.getBoundingClientRect();
-      if (r.left < MARGIN) return MARGIN - r.left;
-      if (r.right > window.innerWidth - MARGIN) return window.innerWidth - MARGIN - r.right;
-      return 0;
-    });
-    labels.forEach((el, i) => {
-      if (shifts[i]) el.style.setProperty("--clamp", `${Math.round(shifts[i])}px`);
-    });
-  }, []);
+  const fitLabels = useCallback(() => {
+    const vw = window.innerWidth;
+    if (!vw) return;
+    const MARGIN = 12, MIN_REACH = 0.6;
+
+    for (const [key, el] of labelRefs.current) {
+      if (!el) continue;
+      const hs = el.parentElement;
+      const g = geometry(HOTSPOTS.find((h) => h.key === key), isSmall);
+      const w = el.offsetWidth;
+      const anchorX = hs.getBoundingClientRect().left;
+
+      // Mirrors the CSS: --tip along the bearing, then --ax on the word.
+      const wordLeft = (reach) => {
+        const tipX = anchorX + (g.tip * reach + TIP_AIR) * g.cos;
+        if (!g.horizontal) return tipX - w / 2;
+        return g.cos < 0 ? tipX - w : tipX;
+      };
+      const overhang = (left) => {
+        if (left < MARGIN) return MARGIN - left;                   // +: needs to go right
+        if (left + w > vw - MARGIN) return vw - MARGIN - (left + w);   // −: needs to go left
+        return 0;
+      };
+
+      let reach = 1;
+      let over = overhang(wordLeft(1));
+      if (over && g.horizontal) {
+        // Only the tip's x component fixes an x overhang.
+        reach = Math.max(MIN_REACH, 1 - Math.abs(over) / (g.tip * Math.abs(g.cos)));
+        over = overhang(wordLeft(reach));   // whatever the floor could not absorb
+      }
+      hs.style.setProperty("--reach", String(reach));
+      el.style.setProperty("--clamp", `${Math.round(over)}px`);
+    }
+  }, [isSmall]);
 
   useLayoutEffect(() => {
-    clampLabels();
+    fitLabels();
     /* Re-measure once the webfont lands. Archivo Expanded is materially wider
        than the fallback stack, so a label measured before it loads fits, then
        grows past the edge when it swaps in — which is exactly how "OUR STORY"
        escaped the viewport on a 375px screen. */
-    document.fonts?.ready.then(clampLabels).catch(() => {});
-    window.addEventListener("resize", clampLabels);
-    return () => window.removeEventListener("resize", clampLabels);
-  }, [clampLabels, isSmall, grown, badge]);
+    document.fonts?.ready.then(fitLabels).catch(() => {});
+    window.addEventListener("resize", fitLabels);
+    return () => window.removeEventListener("resize", fitLabels);
+  }, [fitLabels, isSmall, grown, badge]);
 
-  /* Where the label sits relative to the branch it belongs to.
+  /* Where the branch ends, and how the word hangs off it.
 
-     --nx/--ny land exactly on the branch TIP, so anchoring the label's top-left
-     corner there makes the word grow back across the twigs it is supposed to
-     hang off. The label has to be pushed a little further along the bearing
-     (so it does not touch) and then aligned so its NEAR edge is the one at the
-     tip: right-aligned for a branch pointing left, centred for one pointing
-     straight up or down, left-aligned for one pointing right. */
+     The silhouette is drawn in a 200×120 box with its trunk running left to
+     right along y = 60 and its far tip at x ≈ 197, then the box is scaled to
+     `blen` wide and rotated to `bang` about its left-centre. The tip is
+     therefore 0.985·blen along the bearing — pure geometry, so there is
+     nothing to hand-tune and nothing that can drift from the drawing.
+
+     The word is then aligned so the tip lands on the END of it, on the
+     word's own mid-line: a branch reaching left meets the word's right edge,
+     one reaching right meets its left edge, both at half the word's height.
+     A branch closer to vertical than horizontal instead meets the word's top
+     or bottom edge, centred. The old top-left anchor plus a 16px gap put the
+     tip at the word's CORNER, 8px past it, and on the bag branch 29px above
+     the first letter — a twig pointing at the word rather than into it. */
   const place = (h) => {
-    const p = isSmall ? h.mobile : h.desktop;
-    const rad = (p.bang * Math.PI) / 180;
-    const dx = Math.cos(rad);
-    const dy = Math.sin(rad);
-    const GAP = 16;                       // clear air between twig-tip and word
-
-    let align = "0";                      // branch points right: word runs right
-    if (dx < -0.25) align = "-100%";      // points left: word ends at the tip
-    else if (Math.abs(dx) <= 0.25) align = "-50%";   // near-vertical: centre it
-
-    return {
-      ...p,
-      nx: p.nx + dx * GAP,
-      ny: p.ny + dy * GAP,
-      align,
-    };
+    const g = geometry(h, isSmall);
+    let ax = "-50%", ay = "-50%";
+    if (g.horizontal) ax = g.cos < 0 ? "-100%" : "0%";   // word ends / starts at the tip
+    else              ay = g.sin < 0 ? "-100%" : "0%";   // word sits above / below it
+    return { ...g, ax, ay };
   };
 
   return (
@@ -398,7 +443,14 @@ export default function LaunchCanvas({ onNavigate }) {
               <div
                 key={h.key}
                 className={`hs ${grown[h.key] ? "hs-grown" : ""}`}
-                style={{ left: p.hx, top: p.hy }}
+                /* The branch box and the label both read their geometry from
+                   here, so the tip and the word cannot be placed from two
+                   different numbers. --reach is written by fitLabels. */
+                style={{
+                  left: p.hx, top: p.hy,
+                  "--blen": `${p.blen}px`, "--bang": `${p.bang}deg`,
+                  "--cos": p.cos, "--sin": p.sin,
+                }}
               >
                 <span className="hs-anchor" aria-hidden="true" />
 
@@ -407,11 +459,6 @@ export default function LaunchCanvas({ onNavigate }) {
                   viewBox="0 0 200 120"
                   preserveAspectRatio="none"
                   aria-hidden="true"
-                  style={{
-                    width: `${p.blen}px`,
-                    height: `${p.blen * 0.62}px`,
-                    transform: `translateY(-50%) rotate(${p.bang}deg)`,
-                  }}
                 >
                   <g stroke={`url(#${h.gradientId})`} fill="none" strokeLinecap="round">
                     {h.paths.map((path, i) => (
@@ -426,7 +473,7 @@ export default function LaunchCanvas({ onNavigate }) {
                   aria-label={h.key === "cart" ? `${h.label} (${badge})` : h.label}
                   ref={(el) => labelRefs.current.set(h.key, el)}
                   className="hs-node pointer-events-auto"
-                  style={{ "--nx": `${p.nx}px`, "--ny": `${p.ny}px`, "--align": p.align }}
+                  style={{ "--ax": p.ax, "--ay": p.ay }}
                 >
                   {h.label}
                   {h.key === "cart" && ` (${badge})`}
