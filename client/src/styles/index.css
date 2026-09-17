@@ -294,10 +294,17 @@
     white-space: nowrap;
     font-family: var(--font-brand);
     font-stretch: 125%;
-    font-weight: 700;
+    /* 800 is the top of the wght range index.html requests (400..800); the
+       word sat too light on the cream at 700. The drop-shadow is the other
+       half of that: a hairline of dark under the glyphs lifts gold off cream
+       without changing its colour. It has to be filter, not text-shadow —
+       the fill is a background clipped to the text, so a text-shadow paints
+       BEHIND the transparent glyphs and shows through them as mud. */
+    font-weight: 800;
     font-size: 21px;
     letter-spacing: .1em;
     text-transform: uppercase;
+    filter: drop-shadow(0 1px 0 rgba(58, 42, 18, .45)) drop-shadow(0 0 1px rgba(58, 42, 18, .25));
     /* Gold, top to bottom — the same metal as the branch it hangs off, and
        every stop stays inside the gold hue. Two earlier versions put a pale
        band through the word (grey, then cream) as a specular highlight; on
