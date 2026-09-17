@@ -503,10 +503,28 @@ the bag's contents are right if opened mid-flight) and only the badge waits.
 
 Anchors sit on the coin's measured rim and the silhouette is pinned by its left
 edge and rotated to the bearing, so a branch grows out of the metal rather than
-floating near it. Bearings are hand-set and uneven; `angleSmall` in
-`hotspots.js` is the sub-768px variant. A `useLayoutEffect` in `LaunchCanvas`
-measures each label after layout and nudges it back inside the viewport — that
-clamp is what keeps "Your bag (12)" on screen without per-breakpoint tuning.
+floating near it. Bearings are hand-set and uneven; `mobile` in `hotspots.js`
+is the sub-768px variant. Each entry is only `hx/hy` (rim anchor), `blen`
+(reach) and `bang` (bearing) — **the label is not positioned in the data.**
+
+The silhouette's trunk ends at `(197, 60)` in its 200×120 box, so the tip is
+`0.985·blen` along the bearing. `LaunchCanvas` puts that on the `.hs` as CSS
+variables (`--blen --bang --cos --sin`), the branch box and the label's
+transform both read them, and the word is aligned so the tip lands on its
+END, on its mid-line (`--ax/--ay`, set by `place()`): a branch reaching left
+meets the word's right edge, one reaching right its left edge, and a branch
+closer to vertical meets the word's top or bottom edge, centred. There used to
+be hand-rounded `nx/ny` offsets plus a 16px gap; they put the tip at the
+word's corner, and on the bag branch 29px above its first letter.
+
+Keeping a wide label on screen is done by shortening the branch's `--reach`,
+never by sliding the word away from it — that is what `fitLabels` does, and
+it predicts the word's rectangle from the anchor, the reach and the label's
+`offsetWidth` instead of reading its bounding box. The label's transform is
+transitioned with a half-second delay for the entrance, so a rect read after a
+write reports where the word *was*; a fit that measured it applied the same
+correction twice. Only past the reach floor (0.6), or on a near-vertical
+branch, does the word slide, and then along the edge the tip touches.
 
 ## Judgement calls worth knowing
 
