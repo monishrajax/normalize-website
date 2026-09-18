@@ -64,11 +64,14 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
     >
       <div className="mx-auto flex max-w-(--container-site) items-center justify-between gap-2 px-3 py-2 md:gap-3 md:px-8">
         {/* Left: one link, to the products canvas. It teleports — it does not
-            scroll the home page. */}
+            scroll the home page. Set in brown rather than the muted grey the
+            icon labels use: it is the one piece of primary navigation and the
+            only word on this side of the bar, and at muted it sank into the
+            cream. */}
         <div className="flex flex-1 items-center">
           <button
             onClick={onOpenProducts}
-            className="grid h-11 place-items-center px-1 text-[10px] tracking-[0.1em] text-muted
+            className="grid h-11 place-items-center px-1 text-[10px] tracking-[0.1em] text-brown
                        uppercase transition-colors hover:text-ink md:text-[11px] md:tracking-[0.16em]"
           >
             Products
