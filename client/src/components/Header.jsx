@@ -16,8 +16,10 @@ function Icon({ path, className = "" }) {
    their words and keep only the icon — and their counts ride ON the icon as a
    badge rather than sitting beside it as text, because three counts laid out
    inline push the centred wordmark off a 375px screen. */
+/* Brown, matching the Products link on the other side of the bar — at the
+   muted grey the header's words sank into the cream. */
 const ACTION =
-  "grid h-11 min-w-11 grid-flow-col place-items-center gap-1.5 text-muted transition-colors hover:text-ink";
+  "grid h-11 min-w-11 grid-flow-col place-items-center gap-1.5 text-brown transition-colors hover:text-ink";
 
 function Count({ n }) {
   /* A badge bubble on the icon's top corner, not a glyph inside the shape.
@@ -64,10 +66,8 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
     >
       <div className="mx-auto flex max-w-(--container-site) items-center justify-between gap-2 px-3 py-2 md:gap-3 md:px-8">
         {/* Left: one link, to the products canvas. It teleports — it does not
-            scroll the home page. Set in brown rather than the muted grey the
-            icon labels use: it is the one piece of primary navigation and the
-            only word on this side of the bar, and at muted it sank into the
-            cream. */}
+            scroll the home page. Brown, like every word in this bar — at the
+            muted grey they sank into the cream. */}
         <div className="flex flex-1 items-center">
           <button
             onClick={onOpenProducts}
