@@ -419,8 +419,12 @@ that stretch away.
   reads as a sticker.
 - The gold arc is centred at equirect `u = 0.75` (behind the camera) and spans
   ±115°, because a flat face's reflection sweeps at twice its rotation angle.
-- `envMapIntensity` follows `0.14 + 1.45·|cos(rotY)|³` on the faces; the rim gets
-  the inverse weighting so it stays lit while the faces go dark at profile.
+- `envMapIntensity` on the faces follows `0.14 + 1.45·f(rotY)`, where `f` is
+  `faceBrightness()` in `coinScene.js`: full brightness HELD until the face is
+  ~42° off axis, then a smoothstep down to the floor by ~83°. The brief's plain
+  `|cos|³` was replaced on request — it starts dimming the moment the coin
+  leaves face-on (0.65 at 30°, 0.35 at 45°) and read as going dark too early
+  in a turn. The rim is left alone so it stays lit at profile.
 - **The dock must be measured against the stage's PINNED geometry.** While
   pinned, ScrollTrigger fixes the stage to the viewport top, so its centre is
   `(offsetWidth/2, offsetHeight/2)`. Measuring `getBoundingClientRect()` at setup

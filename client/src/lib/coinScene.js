@@ -21,9 +21,23 @@ import * as THREE from "three";
 const FACE_FRONT = "/assets/coin-front.webp";
 const FACE_BACK = "/assets/coin-back.webp";
 
-/* Face brightness as a function of the coin's own rotation. */
+/* Face brightness as a function of the coin's own rotation.
+
+   Not a plain cosine power. |cos|³ starts dimming the moment the face leaves
+   the axis — 0.83 at 20°, 0.65 at 30°, 0.35 at 45° — which read as the coin
+   going dark too early in a turn. This HOLDS full brightness until the face
+   is about 42° off axis, then falls through a smoothstep to the floor by
+   about 83°, so the flash lingers through the first half of the turn and the
+   shadow still arrives at the profile. */
 const SHADOW_FLOOR = 0.14;   // at profile — deep shadow, never pure black
 const FLASH_GAIN = 1.45;     // peak overdrive, face-on
+const HOLD_COS = 0.74;       // full brightness down to this |cos|  (~42° off axis)
+const DARK_COS = 0.12;       // at the floor from this |cos| inward (~83°)
+function faceBrightness(rotY) {
+  const c = Math.abs(Math.cos(rotY));
+  const t = Math.min(1, Math.max(0, (c - DARK_COS) / (HOLD_COS - DARK_COS)));
+  return t * t * (3 - 2 * t);
+}
 
 /* The idle glint: a grazing streak that rakes across the face. */
 const GLINT_PERIOD = 4.2;    // seconds between sweeps
@@ -467,10 +481,10 @@ export function createCoinScene(container, { isSmall = false } = {}) {
     tiltGroup.rotation.x = tilt.y * TILT_RADIANS;
 
     /* ---- Face brightness follows the coin's own rotation ----
-       Blinding flash face-on, deep shadow at profile. The cubic makes the
-       falloff feel physical rather than linear. This is the BASE state and it
+       Blinding flash face-on, held through the first half of the turn, deep
+       shadow at profile — see faceBrightness. This is the BASE state and it
        applies always — the glint below only adds to it. */
-    const face = Math.abs(Math.cos(pivot.rotation.y)) ** 3;
+    const face = faceBrightness(pivot.rotation.y);
     keyLight.intensity = 1.1 * (0.35 + 0.65 * face);
 
     /* ---- The idle glint ----
