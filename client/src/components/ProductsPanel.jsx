@@ -30,9 +30,11 @@ export default function ProductsPanel({
   open, onClose, products, loading, error,
   category, onCategoryChange, sort, onSortChange, onSelect,
 }) {
+  /* Brown for the resting state, like the header's words — at muted grey the
+     filter bar sank into the cream. The active pill is ink plus the rule. */
   const pill = (active) =>
-    `grid h-11 place-items-center px-3 text-[11px] tracking-[0.14em] uppercase transition-colors ` +
-    (active ? "text-ink" : "text-muted hover:text-ink");
+    `grid h-11 place-items-center px-3 text-[12px] tracking-[0.14em] uppercase transition-colors ` +
+    (active ? "text-ink" : "text-brown hover:text-ink");
 
   return (
     <Panel open={open} onClose={onClose} eyebrow="The catalogue" wide>
@@ -57,7 +59,7 @@ export default function ProductsPanel({
         </nav>
 
         <div className="flex flex-wrap items-center gap-x-1">
-          <span className="mr-1 text-[10px] tracking-[0.14em] text-muted uppercase">Sort</span>
+          <span className="mr-1 text-[11px] tracking-[0.14em] text-brown uppercase">Sort</span>
           {SORTS.map((s) => (
             <button
               key={s.value}
@@ -68,7 +70,7 @@ export default function ProductsPanel({
             >
               {s.label}
               {s.arrow && (
-                <span aria-hidden="true" className="text-[15px] leading-none">{s.arrow}</span>
+                <span aria-hidden="true" className="text-[17px] leading-none">{s.arrow}</span>
               )}
             </button>
           ))}
