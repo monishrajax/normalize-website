@@ -77,7 +77,7 @@ export default function ProductsPanel({
         </div>
       </div>
 
-      <p className="mb-8 text-[11px] tracking-[0.14em] text-muted uppercase">
+      <p className="mb-8 text-[12px] tracking-[0.14em] text-brown uppercase">
         {loading ? "Loading…" : `${products.length} ${products.length === 1 ? "piece" : "pieces"}`}
       </p>
 
