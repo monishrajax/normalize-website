@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
    One observer per container rather than one per card — a grid of twenty
    products should not install twenty observers. Elements are unobserved once
    revealed, so scrolling back up doesn't replay the entrance. */
-export function useReveal({ step = 70, enabled = true } = {}) {
+export function useReveal({ step = 42, enabled = true } = {}) {
   const ref = useRef(null);
 
   useEffect(() => {
