@@ -81,7 +81,12 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
         {/* Centre: the coin and the wordmark. Rule 1 — always centred.
             #header-coin-slot is the dock the launch canvas's WebGL coin arcs
             into on scroll; see LaunchCanvas. */}
-        <a href="#top" className="flex shrink-0 items-center gap-2.5" aria-label="Normalize — home">
+        {/* min-h-11 is the brief's 44px touch floor, which this link was under
+            at 20px — it is a header control like any other. It is a MINIMUM on
+            a centred flex box, not padding or a fixed height, so the coin slot
+            inside keeps its own centre and the dock the launch coin flies into
+            does not move. */}
+        <a href="#top" className="flex min-h-11 shrink-0 items-center gap-2.5" aria-label="Normalize — home">
           {/* The chassis the launch coin is REPARENTED into at the end of the
               toss. A real clipped DOM boundary, not a numeric clamp — the
               canvas physically cannot overflow the header, however the scroll

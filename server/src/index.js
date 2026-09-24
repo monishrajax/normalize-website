@@ -67,9 +67,24 @@ export function createApp() {
 
   /* In production (standalone Node server) the built React bundle is served
      from the same origin, which removes the CORS question entirely.
-     On Vercel, static assets are served by Vercel's CDN — this block is skipped. */
+     On Vercel, static assets are served by Vercel's CDN — this block is skipped.
+
+     The headers matter as much as the files. On Vercel they come from
+     `vercel.json`, which this shape never reads, so serving the app from here
+     shipped it with NO X-Frame-Options, X-Content-Type-Options or
+     Referrer-Policy — the storefront was framable and MIME-sniffable on the
+     one deployment shape that has no CDN in front of it. They are set only
+     when Vercel is not, so the two cannot both write the same header. */
   if (process.env.NODE_ENV === "production" && process.env.VERCEL !== "1") {
     const dist = path.join(__dirname, "../../client/dist");
+    app.use((req, res, next) => {
+      res.set({
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+      });
+      next();
+    });
     app.use(express.static(dist));
     app.get("*", (req, res) => res.sendFile(path.join(dist, "index.html")));
   }

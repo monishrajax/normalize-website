@@ -10,7 +10,11 @@ async function request(path, options = {}) {
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
       ...options,
     });
-  } catch {
+  } catch (err) {
+    /* An abort is the caller's own doing — a superseded search, a panel that
+       closed — not a connection problem, so it is rethrown as itself and the
+       caller can tell "I cancelled this" from "the network failed". */
+    if (err?.name === "AbortError") throw err;
     // A network failure has no JSON body to read, so it needs its own message.
     throw new Error("Couldn't reach the server. Check your connection.");
   }
@@ -23,11 +27,14 @@ async function request(path, options = {}) {
 export const api = {
   getConfig: () => request("/config"),
 
-  getProducts: (params = {}) => {
+  /* `options` is fetch's, not the query string's — it is how a caller hands in
+     an AbortSignal. Keep the two apart: anything in `params` becomes a URL
+     parameter, so a signal passed there would be serialised into the query. */
+  getProducts: (params = {}, options = {}) => {
     const q = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== "" && v != null)
     ).toString();
-    return request(`/products${q ? "?" + q : ""}`);
+    return request(`/products${q ? "?" + q : ""}`, options);
   },
 
   getProduct: (slug) => request(`/products/${encodeURIComponent(slug)}`),
