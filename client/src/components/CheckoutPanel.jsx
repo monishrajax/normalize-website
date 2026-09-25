@@ -186,10 +186,6 @@ export default function CheckoutPanel({ open, onClose }) {
                                  transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40 sm:col-span-2">
                 {busy ? "Please wait…" : `Pay ${money(shown.total)}`}
               </button>
-
-              <p className="text-center text-[10px] tracking-wide text-muted sm:col-span-2">
-                Payments secured by Razorpay. Card details never touch our servers.
-              </p>
           </form>
         </>
       )}

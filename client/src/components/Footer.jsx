@@ -114,9 +114,6 @@ export default function Footer({ onOpenInfo }) {
           <p className="text-[10px] tracking-[0.14em] text-muted uppercase">
             © {new Date().getFullYear()} Normalize · Made in Chennai
           </p>
-          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">
-            Payments secured by Razorpay
-          </p>
         </div>
       </div>
     </footer>
