@@ -19,7 +19,10 @@ export default function Hero() {
         </span>
       </div>
 
-      <p className="mb-5 text-[11px] tracking-[0.22em] text-muted uppercase">
+      {/* The slogan. Brown rather than muted grey, like the header's words —
+          it is the brand line sitting directly under the wordmark, and at
+          muted on cream it read as a caption. */}
+      <p className="mb-5 text-[13px] tracking-[0.22em] text-brown uppercase">
         Everything else is noise.
       </p>
 
