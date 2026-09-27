@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Coin from "./Coin";
 import { STAR_PATH } from "./icons";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 function Icon({ path, className = "" }) {
   return (
@@ -40,8 +41,9 @@ function Count({ n }) {
   );
 }
 
-export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, onOpenCart }) {
+export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, onOpenCart, onOpenAccount }) {
   const { badge, wishlist, registerBagTarget } = useCart();
+  const { enabled: accountsEnabled, signedIn } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const bagIconRef = useRef(null);
 
@@ -117,6 +119,28 @@ export default function Header({ onOpenProducts, onOpenSearch, onOpenWishlist, o
             </span>
             <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">Wishlist</span>
           </button>
+
+          {/* Account sits before the bag, and only from 768px up.
+
+              At 375px the header already holds PRODUCTS, the centred wordmark
+              and three 44px controls with zero overflow — measured, not
+              assumed. A fourth would squeeze the wordmark off centre and break
+              Rule 1, so on a phone the way in is the link at the bottom of the
+              Bag panel instead. It is hidden entirely when accounts are not
+              configured: a control that opens a panel saying "accounts are not
+              available" is worse than no control. */}
+          {accountsEnabled && (
+            <button
+              onClick={onOpenAccount}
+              aria-label={signedIn ? "Your account" : "Sign in"}
+              className={`${ACTION} hidden md:grid`}
+            >
+              <Icon path={<><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0114 0" /></>} />
+              <span className="hidden text-[11px] tracking-[0.14em] uppercase lg:inline">
+                {signedIn ? "Account" : "Sign in"}
+              </span>
+            </button>
+          )}
 
           <button onClick={onOpenCart} aria-label={`Bag (${badge})`} className={ACTION}>
             {/* The genie lands here — hence the ref on the icon itself rather
