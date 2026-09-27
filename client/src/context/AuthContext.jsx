@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { supabase, authEnabled } from "../lib/supabase";
+import { getSupabase, authEnabled } from "../lib/supabase";
 import { setAccessTokenProvider } from "../lib/api";
 
 /* Who is signed in, and the four things they can do about it.
@@ -41,28 +41,43 @@ export function AuthProvider({ children }) {
        expiring token transparently, which state cannot do — a token copied
        into React at sign-in would start failing an hour later. */
     setAccessTokenProvider(async () => {
-      const { data } = await supabase.auth.getSession();
+      const sb = await getSupabase();
+      if (!sb) return null;
+      const { data } = await sb.auth.getSession();
       return data?.session?.access_token ?? null;
     });
 
     let alive = true;
-    supabase.auth.getSession().then(({ data }) => {
+    let unsubscribe = null;
+
+    (async () => {
+      const sb = await getSupabase();
+      if (!sb || !alive) return;
+
+      const { data } = await sb.auth.getSession();
       if (!alive) return;
       setSession(data?.session ?? null);
       setLoading(false);
-    });
 
-    /* Covers every way the session can change WITHOUT this tab doing anything:
-       a token refresh, a sign-out in another tab, a password-reset link landing
-       on the page. Polling or trusting the initial read would miss all three. */
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next ?? null);
-      setLoading(false);
-    });
+      /* Covers every way the session can change WITHOUT this tab doing
+         anything: a token refresh, a sign-out in another tab, a password-reset
+         link landing on the page. Polling or trusting the initial read would
+         miss all three. */
+      const { data: sub } = sb.auth.onAuthStateChange((_event, next) => {
+        setSession(next ?? null);
+        setLoading(false);
+      });
+      unsubscribe = () => sub?.subscription?.unsubscribe();
+      /* The SDK arrives after first paint, so this can resolve once the effect
+         has already been torn down — a fast navigation, or StrictMode's double
+         mount in dev. Unsubscribing immediately stops a dead listener writing
+         state into an unmounted tree. */
+      if (!alive) unsubscribe();
+    })();
 
     return () => {
       alive = false;
-      sub?.subscription?.unsubscribe();
+      unsubscribe?.();
       setAccessTokenProvider(null);
     };
   }, []);
@@ -72,7 +87,8 @@ export function AuthProvider({ children }) {
      `{ error }` — null on success — so callers have one shape to render. */
   const signIn = useCallback(async (email, password) => {
     if (!authEnabled) return { error: "Accounts are not available right now." };
-    const { error } = await supabase.auth.signInWithPassword({
+    const sb = await getSupabase();
+    const { error } = await sb.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
@@ -81,7 +97,8 @@ export function AuthProvider({ children }) {
 
   const signUp = useCallback(async (email, password, fullName) => {
     if (!authEnabled) return { error: "Accounts are not available right now." };
-    const { data, error } = await supabase.auth.signUp({
+    const sb = await getSupabase();
+    const { data, error } = await sb.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
       options: {
@@ -99,13 +116,15 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     if (!authEnabled) return;
-    await supabase.auth.signOut();
+    const sb = await getSupabase();
+    await sb?.auth.signOut();
     setSession(null);
   }, []);
 
   const resetPassword = useCallback(async (email) => {
     if (!authEnabled) return { error: "Accounts are not available right now." };
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    const sb = await getSupabase();
+    const { error } = await sb.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
       redirectTo: window.location.origin,
     });
     /* Deliberately reports success even when the address is unknown. Telling a

@@ -20,6 +20,10 @@ export default defineConfig({
         manualChunks: {
           three: ["three"],
           gsap: ["gsap"],
+          /* Named so the auth SDK is one cacheable chunk rather than being
+             inlined into whichever component happened to pull it first. It is
+             fetched on the first account interaction, not at page load. */
+          supabase: ["@supabase/supabase-js"],
         },
       },
     },
