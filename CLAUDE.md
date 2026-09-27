@@ -102,6 +102,57 @@ Product ids are `uuid` — `pricing.js` validates the uuid shape
 before querying so a malformed id returns "Unknown item in cart" rather than a
 Postgres 22P02 cast error surfacing as a 500.
 
+## Customer accounts (Supabase Auth)
+
+Identity is Supabase's, not ours. `auth.users` holds the email, the password
+hash and the confirmation state; we never write to it and there is no password
+column of ours to leak. `server/sql/002_accounts.sql` adds only what a
+storefront hangs off it: `orders.user_id`, plus `profiles`, `addresses` and
+`wishlists`.
+
+Because `auth.users` lives in the same database these are real foreign keys —
+`on delete cascade` for addresses and wishlist, **`set null` for orders**:
+deleting an account must not delete the sales record. The FKs are added in a
+guarded `do $$` block at the end of the file, because the e2e harness builds a
+bare Postgres with no `auth` schema and a hard reference would make accounts
+the one part of the app no test could reach.
+
+Five rules here are load-bearing:
+
+1. **The server never learns who you are from the request body.** Every account
+   route takes its id from `req.user.id`, set only by a signature check in
+   `server/src/lib/auth.js`. A route reading `req.body.userId` is a route that
+   hands one customer another's home address.
+2. **`optionalAuth` on `POST /api/orders`, never `requireAuth`.** Guest checkout
+   is the default and gating it costs orders. A signed-in customer is merely
+   recognised so the order can be stamped and appear in their history.
+3. **Order history is `where user_id = ...` only.** Never "or match
+   `customer->>'email'`". Matching on email would hand a signed-up stranger the
+   delivery address and phone of every guest order placed with that address —
+   and a confirmed email proves they can read the inbox today, not that they
+   placed the order.
+4. **supabase-js in the browser is for AUTH ONLY.** Every table has RLS on with
+   no policies, so the anon key cannot read a row. Customer data goes through
+   our API. `supabase.from(...)` would return nothing and tempt someone to
+   "fix" it with a permissive policy — the one change that would expose every
+   address to the internet.
+5. **The SDK is dynamically imported.** Statically importing it put 61KB gzipped
+   into the main chunk (64 → 125KB) and charged it to visitors who never sign
+   in. `authEnabled` is a plain env check with no import behind it, so the
+   header decides whether to show an account button without fetching anything.
+
+Missing `VITE_SUPABASE_*` is not an error: accounts hide themselves and the
+storefront runs guest-only, exactly as before. Verified — no account control,
+no SDK request, no console errors.
+
+The account control is desktop-only (`hidden md:grid`). At 375px the header
+already holds PRODUCTS, the centred wordmark and three 44px controls with zero
+overflow; a fourth pushes the wordmark off centre and breaks Rule 1.
+
+**Custom SMTP is a prerequisite.** Supabase's built-in mail is rate-limited to a
+handful an hour and is not for production — without it, signup confirmations
+and password resets silently fail under real traffic.
+
 ## Payment flow (Razorpay)
 
 1. `POST /api/orders` — prices the cart, opens a Razorpay order with
