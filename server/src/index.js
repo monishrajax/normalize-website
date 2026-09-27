@@ -9,6 +9,7 @@ import productRoutes from "./routes/products.js";
 import orderRoutes from "./routes/orders.js";
 import trackingRoutes from "./routes/tracking.js";
 import configRoutes from "./routes/config.js";
+import accountRoutes from "./routes/account.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,6 +65,10 @@ export function createApp() {
   app.use("/api/orders", orderRoutes);
   app.use("/api/track", trackingRoutes);
   app.use("/api/config", configRoutes);
+  /* Account routes carry their own requireAuth on the router, so mounting here
+     cannot expose them. The tighter /api/orders limiter deliberately does not
+     cover this path: browsing your own order history is not a payment attempt. */
+  app.use("/api/account", accountRoutes);
 
   /* In production (standalone Node server) the built React bundle is served
      from the same origin, which removes the CORS question entirely.

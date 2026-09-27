@@ -9,7 +9,7 @@
    Nothing is written outside the temp directory, and the whole cluster is
    deleted on stop, so a test run can never touch a real database by accident. */
 import { spawn, execFile } from "node:child_process";
-import { mkdtemp, rm, readFile } from "node:fs/promises";
+import { mkdtemp, rm, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import net from "node:net";
@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 
 const run = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SCHEMA = path.join(ROOT, "sql", "001_init.sql");
+const SQL_DIR = path.join(ROOT, "sql");
 
 async function freePort() {
   return new Promise((resolve, reject) => {
@@ -38,7 +38,11 @@ async function have(bin) {
 async function applySchema(url) {
   const sql = (await import("postgres")).default;
   const db = sql(url, { max: 1, prepare: false, onnotice: () => {} });
-  await db.unsafe(await readFile(SCHEMA, "utf8"));
+  // Every migration, in order — the throwaway database must match Supabase's
+  // shape or the suite silently stops covering whatever the newest file adds.
+  for (const f of (await readdir(SQL_DIR)).filter((n) => n.endsWith(".sql")).sort()) {
+    await db.unsafe(await readFile(path.join(SQL_DIR, f), "utf8"));
+  }
   await db.end();
 }
 

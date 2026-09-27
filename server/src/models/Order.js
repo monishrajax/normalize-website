@@ -50,6 +50,11 @@ export async function create(data) {
     pricing: data.pricing,
     customer: data.customer ?? {},
     shipping: data.shipping ?? {},
+    /* Null for a guest, which is most orders. This list is an ALLOWLIST — a
+       field the caller passes that is not named here is silently dropped, so
+       anything new has to be added in both places or it vanishes without an
+       error. */
+    userId: data.userId ?? null,
   });
   const [created] = await sql`insert into orders ${sql(row)} returning *`;
   return created;

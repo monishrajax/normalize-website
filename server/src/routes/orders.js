@@ -12,6 +12,8 @@ import { priceCart, PricingError } from "../lib/pricing.js";
 import { createRazorpayOrder, isValidPaymentSignature, isValidWebhookSignature, publicKeyId } from "../lib/razorpay.js";
 import { shiprocket, shiprocketConfigured } from "../lib/shiprocket.js";
 
+import { optionalAuth } from "../lib/auth.js";
+
 const router = Router();
 
 /* During a PRE-BOOK you take payment now and ship weeks later, so minting an
@@ -24,7 +26,11 @@ const CREATE_SHIPMENT = process.env.SHIPROCKET_CREATE_ON_PAYMENT === "true";
    "created". The amount is computed HERE; nothing about money is taken from
    the request body beyond which items and how many.
 --------------------------------------------------------------------------- */
-router.post("/", async (req, res, next) => {
+/* optionalAuth, never requireAuth: guest checkout is the default and must stay
+   that way — gating it behind an account costs orders. A signed-in customer is
+   simply recognised, so the order can be stamped with their id and appear in
+   their history. A missing or bad token is not an error here, just a guest. */
+router.post("/", optionalAuth, async (req, res, next) => {
   try {
     const { items, promo } = req.body || {};
 
@@ -47,6 +53,11 @@ router.post("/", async (req, res, next) => {
       orderNumber,
       razorpayOrderId: rzpOrder.id,
       status: "created",
+      /* From the VERIFIED token, never from the body. A browser can put any
+         uuid in a payload, and a request-supplied user_id would let anyone
+         file their order into a stranger's history — or read it back out of
+         /api/account/orders. Null for guests, which is the normal case. */
+      userId: req.user?.id ?? null,
       items: priced.lines.map((l) => ({
         productId: l.productId, name: l.name, price: l.price,
         variant: l.variant, qty: l.qty, sku: l.sku,
