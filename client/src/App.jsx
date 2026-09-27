@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
 import { useCatalogue } from "./hooks/useProducts";
 
 import AnnounceBar from "./components/AnnounceBar";
@@ -13,6 +14,7 @@ import WishlistPanel from "./components/WishlistPanel";
 import ProductPanel from "./components/ProductPanel";
 import CheckoutPanel from "./components/CheckoutPanel";
 import InfoPanel from "./components/InfoPanel";
+import AuthPanel from "./components/AuthPanel";
 import Footer from "./components/Footer";
 
 /* The launch canvas pulls in three.js and gsap — by far the heaviest thing on
@@ -30,7 +32,7 @@ export default function App() {
   /* Exactly one canvas is open at a time. Rule 2 — every secondary surface is
      a full-viewport canvas, so they are all mutually exclusive by nature and
      one piece of state is enough. */
-  const [panel, setPanel] = useState(null);        // "search" | "cart" | "wishlist" | "products"
+  const [panel, setPanel] = useState(null);        // "search" | "cart" | "wishlist" | "products" | "account"
   const [selected, setSelected] = useState(null);  // product being quick-viewed
   const [infoSection, setInfoSection] = useState(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -53,6 +55,7 @@ export default function App() {
   };
 
   return (
+    <AuthProvider>
     <CartProvider products={allProducts} config={config}>
       <AnnounceBar config={config} />
 
@@ -61,6 +64,7 @@ export default function App() {
         onOpenSearch={() => setPanel("search")}
         onOpenWishlist={() => setPanel("wishlist")}
         onOpenCart={() => setPanel("cart")}
+        onOpenAccount={() => setPanel("account")}
       />
 
       <main id="top">
@@ -110,11 +114,14 @@ export default function App() {
       />
       <ProductPanel product={selected} onClose={() => setSelected(null)} />
       <CheckoutPanel open={checkoutOpen} onClose={() => setCheckoutOpen(false)} />
+      <AuthPanel open={panel === "account"} onClose={close} />
+
       <InfoPanel
         section={infoSection}
         onClose={() => setInfoSection(null)}
         config={config}
       />
     </CartProvider>
+    </AuthProvider>
   );
 }
