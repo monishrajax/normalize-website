@@ -10,6 +10,7 @@ import orderRoutes from "./routes/orders.js";
 import trackingRoutes from "./routes/tracking.js";
 import configRoutes from "./routes/config.js";
 import accountRoutes from "./routes/account.js";
+import waitlistRoutes from "./routes/waitlist.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,6 +70,9 @@ export function createApp() {
      cannot expose them. The tighter /api/orders limiter deliberately does not
      cover this path: browsing your own order history is not a payment attempt. */
   app.use("/api/account", accountRoutes);
+  // Public, unauthenticated — this is what the early-access gate posts to
+  // before a visitor has any account. Covered by the general /api limiter.
+  app.use("/api/waitlist", waitlistRoutes);
 
   /* In production (standalone Node server) the built React bundle is served
      from the same origin, which removes the CORS question entirely.

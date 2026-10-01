@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { CartProvider } from "./context/CartContext";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { useCatalogue } from "./hooks/useProducts";
 
 import AnnounceBar from "./components/AnnounceBar";
@@ -15,6 +15,7 @@ import ProductPanel from "./components/ProductPanel";
 import CheckoutPanel from "./components/CheckoutPanel";
 import InfoPanel from "./components/InfoPanel";
 import AuthPanel from "./components/AuthPanel";
+import EarlyAccessGate from "./components/EarlyAccessGate";
 import Footer from "./components/Footer";
 
 /* The launch canvas pulls in three.js and gsap — by far the heaviest thing on
@@ -24,7 +25,32 @@ const LaunchCanvas = lazy(() => import("./components/LaunchCanvas"));
 /* Reading pages the coin's branches can open directly. */
 const INFO_SECTIONS = new Set(["shipping", "sizeguide", "contact", "track", "story", "craft", "careers"]);
 
+/* Off unless explicitly turned on — this fronts the ENTIRE site, including
+   checkout, so it must never flip on by a default. Set VITE_EARLY_ACCESS=true
+   in the host's env vars (Vercel, or client/.env for local testing) when the
+   gate should actually go live, and VITE_GATE_PASSWORD so the team can still
+   reach the real site while it's up. Undoing it is the same switch in
+   reverse — no code change either way. */
+const EARLY_ACCESS = import.meta.env.VITE_EARLY_ACCESS === "true";
+const GATE_UNLOCK_KEY = "normalize_gate_unlocked";
+
 export default function App() {
+  return (
+    <AuthProvider>
+      <GatedApp />
+    </AuthProvider>
+  );
+}
+
+/* Split out from App so it can call useAuth() — which only works inside
+   AuthProvider — to let an already signed-in customer straight past the
+   gate without re-answering anything. */
+function GatedApp() {
+  const { signedIn, loading: authLoading } = useAuth();
+  const [unlocked, setUnlocked] = useState(() => {
+    try { return localStorage.getItem(GATE_UNLOCK_KEY) === "1"; } catch { return false; }
+  });
+
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("featured");
   const { products, allProducts, config, loading, error } = useCatalogue({ category, sort });
@@ -54,8 +80,16 @@ export default function App() {
     document.getElementById(target)?.scrollIntoView({ behavior: "smooth" });
   };
 
+  /* While Supabase is still reading back a stored session, render nothing
+     rather than flashing the gate at a customer who is about to turn out to
+     be signed in. Guest visitors (accounts not configured, or genuinely
+     signed out) pass straight through once authLoading settles. */
+  if (EARLY_ACCESS && !unlocked && authLoading) return null;
+  if (EARLY_ACCESS && !unlocked && !signedIn) {
+    return <EarlyAccessGate onUnlock={() => setUnlocked(true)} />;
+  }
+
   return (
-    <AuthProvider>
     <CartProvider products={allProducts} config={config}>
       <AnnounceBar config={config} />
 
@@ -122,6 +156,5 @@ export default function App() {
         config={config}
       />
     </CartProvider>
-    </AuthProvider>
   );
 }

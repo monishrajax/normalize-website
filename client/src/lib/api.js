@@ -91,6 +91,11 @@ export const api = {
     request("/account/wishlist", { method: "POST", body: JSON.stringify({ productIds }) }),
   unsaveProduct: (productId) =>
     request(`/account/wishlist/${encodeURIComponent(productId)}`, { method: "DELETE" }),
+
+  // The early-access gate's one write. No auth — a stranger with just a name
+  // and an email, before they have any reason to sign in.
+  submitWaitlist: (data) =>
+    request("/waitlist", { method: "POST", body: JSON.stringify(data) }),
 };
 
 export function money(n) {
