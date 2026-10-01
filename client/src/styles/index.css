@@ -140,7 +140,10 @@
      that landed frame instead of snapping back to 0. Needs to be declared
      AFTER .coin-spin .coin-inner above — same specificity, so source order
      is what lets this win when both classes are present together. */
-  .coin-toss .coin-inner { animation: coin-toss-spin 1.5s cubic-bezier(.08,.82,.17,1) 1 both; }
+  /* 2.184s to match the real toss-and-payout recording this plays
+     alongside (COIN_TOSS_MS in EarlyAccessGate.jsx) — change one, change
+     the other, or the spin and the sound finish at different moments. */
+  .coin-toss .coin-inner { animation: coin-toss-spin 2.184s cubic-bezier(.08,.82,.17,1) 1 both; }
   .coin-interactive:active { cursor: grabbing; }
 
   .coin-sm { width: 50px; height: 50px; }

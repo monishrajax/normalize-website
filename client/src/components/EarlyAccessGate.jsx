@@ -71,86 +71,26 @@ function pickQuestion() { return pick(QUESTIONS); }
    "tings" at decreasing intervals for the coin spinning down and settling. */
 function playCoinSound() {
   try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const now = ctx.currentTime;
-
-    // The toss: a quick, sharp flick off the thumb — shorter than before,
-    // because what follows needs to read as fast, not this.
-    const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.13), ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = "bandpass";
-    noiseFilter.Q.value = 1.1;
-    noiseFilter.frequency.setValueAtTime(900, now);
-    noiseFilter.frequency.exponentialRampToValueAtTime(3400, now + 0.12);
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.17, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.14);
-    noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
-    noise.start(now);
-    noise.stop(now + 0.16);
-
-    /* The spin itself: dense, fast ticks that thin out as the coin loses
-       momentum — built from a deceleration curve rather than a hand-typed
-       list, so "starts fast, slows down" is one formula instead of guesswork.
-       Matches the faster visual spin (coin-toss-spin, 4 turns in 1.5s): this
-       is the sound of those same turns, not an independent rhythm next to it. */
-    const spinStart = 0.14;
-    const tickCount = 20;
-    let t = spinStart;
-    for (let i = 0; i < tickCount; i++) {
-      const progress = i / (tickCount - 1);                 // 0 -> 1 across the spin
-      const gap = 0.025 + progress * progress * 0.09;        // 25ms -> ~115ms: widening gap = slowing spin
-      t += gap;
-      const osc = ctx.createOscillator();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(i % 2 === 0 ? 2500 : 2050, now + t);
-      const gain = ctx.createGain();
-      const vol = 0.07 * (1 - progress * 0.55);
-      gain.gain.setValueAtTime(vol, now + t);
-      gain.gain.exponentialRampToValueAtTime(0.0003, now + t + 0.07);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now + t);
-      osc.stop(now + t + 0.09);
-    }
-
-    /* The landing: one lower, fuller strike as it drops flat onto the
-       surface — a real thud-into-clink, not just the last spin tick fading
-       out like the rest. Two layered oscillators (a falling fundamental plus
-       a brighter harmonic) so it reads as metal hitting a hard surface
-       rather than a dull knock. */
-    const landAt = t + 0.1;
-    const landOsc = ctx.createOscillator();
-    landOsc.type = "triangle";
-    landOsc.frequency.setValueAtTime(950, now + landAt);
-    landOsc.frequency.exponentialRampToValueAtTime(420, now + landAt + 0.18);
-    const landGain = ctx.createGain();
-    landGain.gain.setValueAtTime(0.24, now + landAt);
-    landGain.gain.exponentialRampToValueAtTime(0.0004, now + landAt + 0.42);
-    landOsc.connect(landGain).connect(ctx.destination);
-    landOsc.start(now + landAt);
-    landOsc.stop(now + landAt + 0.45);
-
-    const landHarmonic = ctx.createOscillator();
-    landHarmonic.type = "sine";
-    landHarmonic.frequency.setValueAtTime(1800, now + landAt);
-    const landHarmonicGain = ctx.createGain();
-    landHarmonicGain.gain.setValueAtTime(0.1, now + landAt);
-    landHarmonicGain.gain.exponentialRampToValueAtTime(0.0003, now + landAt + 0.2);
-    landHarmonic.connect(landHarmonicGain).connect(ctx.destination);
-    landHarmonic.start(now + landAt);
-    landHarmonic.stop(now + landAt + 0.22);
-
-    setTimeout(() => { try { ctx.close(); } catch { /* already closed */ } }, (landAt + 0.6) * 1000);
+    // A real recording (coin, wood surface, single toss and payout) rather
+    // than synthesis — called straight from the click handler, same as the
+    // version this replaced, which is what makes it a genuine user gesture
+    // and sidesteps any autoplay question entirely. 2.184s long; COIN_TOSS_MS
+    // below is read FROM this file's actual length rather than guessed, so
+    // the visual spin and the recording finish together instead of one
+    // running on its own separate timer next to the other.
+    const audio = new Audio("/assets/gate/coin-toss-v1.mp3");
+    audio.volume = 0.8;
+    audio.play().catch(() => {});
   } catch {
     // A sound effect is a nice-to-have; it must never block the gate's flow.
   }
 }
+
+/* The real toss recording is 2.184s - the spin animation and the step timer
+   both key off this ONE number rather than three independently-guessed
+   durations drifting apart from each other. */
+const COIN_TOSS_MS = 2184;
+
 
 /* One of five vertical background loops, picked at random per mount — the
    same "rotate one at random" rule the questions follow, not all five
@@ -261,9 +201,10 @@ export default function EarlyAccessGate({ onUnlock }) {
     setRevealText(pick(viaCoin ? COIN_LINES : CHOSEN_LINES));
     setStep("reveal");
     clearTimeout(revealTimer.current);
-    // Long enough for the coin to visibly complete a spin and the sound to
-    // finish settling (~1.35s), not just a one-line reaction flashing by.
-    revealTimer.current = setTimeout(() => setStep("form"), 2000);
+    // The recording's own length plus a short beat to actually see the
+    // landed coin and the reveal line before moving on, not just a one-line
+    // reaction flashing by the instant the sound stops.
+    revealTimer.current = setTimeout(() => setStep("form"), COIN_TOSS_MS + 300);
   };
 
   const letCoinDecide = () => choose(Math.random() < 0.5 ? question.a : question.b, true);
