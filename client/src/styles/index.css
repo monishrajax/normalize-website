@@ -145,7 +145,14 @@
      real optical falloff, not a drawn vignette. Paint order is back to front. */
   .stage {
     position: relative;
+    /* 100vh on mobile Safari/Chrome counts the area the address bar can slide
+       over, not what is actually visible — the stage ends up taller than the
+       screen, which on a pinned section means real content sits behind the
+       browser chrome. 100dvh tracks the viewport that's truly on screen and
+       resizes with it; the 100vh line stays first as the fallback wherever
+       dvh isn't understood, so this degrades safely rather than breaking. */
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     background: var(--color-cream);
     --lens-r: 220px;
