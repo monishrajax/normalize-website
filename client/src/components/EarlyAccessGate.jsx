@@ -64,10 +64,22 @@ function pickQuestion() { return pick(QUESTIONS); }
 
 /* One of five vertical background loops, picked at random per mount — the
    same "rotate one at random" rule the questions follow, not all five
-   layered or cycling. Files are expected at /assets/gate/loop1..5.mp4 (and
-   matching .jpg posters); until those exist this quietly renders nothing and
-   the plain dark panel underneath shows through unchanged, so shipping the
-   gate is never blocked on the clips being ready. */
+   layered or cycling. Files are expected at /assets/gate/loop1..5-v2.mp4
+   (and matching .jpg posters); until those exist this quietly renders nothing
+   and the plain dark panel underneath shows through unchanged, so shipping
+   the gate is never blocked on the clips being ready.
+
+   The "-v2" is load-bearing, not cosmetic. vercel.json sets
+   `Cache-Control: public, max-age=31536000, immutable` on everything under
+   /assets/ — correct for Vite's own hashed JS/CSS output, but these clips are
+   a plain static passthrough with no hash of their own. The first upload and
+   a later re-compress both replaced the bytes under the SAME filename, and
+   `immutable` tells every browser and CDN edge that already fetched either
+   one to never check again — for up to a year. Bumping the suffix is what
+   actually changes the URL, which is the only thing that forces a fresh
+   fetch under this header; silently overwriting loop1.mp4 a third time would
+   just repeat the exact bug this fixes. The next real change here needs a
+   "-v3" (or better, swap to a hash), not another overwrite. */
 const LOOP_COUNT = 5;
 function GateVideo() {
   const [index] = useState(() => 1 + Math.floor(Math.random() * LOOP_COUNT));
@@ -77,16 +89,23 @@ function GateVideo() {
   const reduced = typeof window !== "undefined"
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* The `autoPlay` attribute alone turned out not to be enough — caught by
-     actually checking `.paused` after mount rather than trusting the
-     attribute, where it sat on the first frame doing nothing despite being
-     muted, looped and playsInline. An explicit `.play()` once the element has
-     a src is what actually starts it; the rejection is swallowed because a
-     browser that blocks it anyway should just leave the poster frame showing,
-     not log a console error. */
+  /* Neither the `autoPlay` attribute nor a plain `.play()` call was actually
+     starting playback — checked by reading `.paused` after mount, not just
+     trusting either one. The cause is a known React/<video> gap: setting
+     `muted` as a JSX prop writes the ATTRIBUTE, but the browser's autoplay
+     gate checks the live `muted` IDL PROPERTY, and React does not reliably
+     sync that property from the attribute before the browser evaluates
+     whether to allow this clip to autoplay. The fix is to set `.muted` (and
+     `.defaultMuted`, for the loop restarting cleanly) on the actual DOM node
+     imperatively, BEFORE calling `.play()`, rather than trusting JSX for it.
+     The rejection is still swallowed — a browser that blocks it regardless
+     should just leave the poster frame showing, not log a console error. */
   useEffect(() => {
-    if (reduced || broken) return;
-    videoRef.current?.play().catch(() => {});
+    const el = videoRef.current;
+    if (!el || reduced || broken) return;
+    el.muted = true;
+    el.defaultMuted = true;
+    el.play().catch(() => {});
   }, [reduced, broken, index]);
 
   if (broken) return null;
@@ -96,13 +115,13 @@ function GateVideo() {
       ref={videoRef}
       aria-hidden="true"
       className="absolute inset-0 h-full w-full object-cover"
-      src={`/assets/gate/loop${index}.mp4`}
-      poster={`/assets/gate/loop${index}.jpg`}
+      src={`/assets/gate/loop${index}-v2.mp4`}
+      poster={`/assets/gate/loop${index}-v2.jpg`}
       muted
       loop
       playsInline
       autoPlay={!reduced}
-      preload="metadata"
+      preload="auto"
       onError={() => setBroken(true)}
     />
   );
