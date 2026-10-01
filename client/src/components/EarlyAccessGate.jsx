@@ -106,6 +106,20 @@ function GateVideo() {
     el.muted = true;
     el.defaultMuted = true;
     el.play().catch(() => {});
+
+    /* Belt and braces: whatever is left of a real autoplay restriction after
+       the fix above, the visitor's own first tap or click is a genuine user
+       gesture no policy blocks — and this page guarantees one arrives soon,
+       since getting past the gate means pressing one of the three question
+       buttons. Retries once on the first interaction, then gets out of the
+       way; a clip that's already playing just gets a harmless extra .play(). */
+    const retry = () => el.play().catch(() => {});
+    document.addEventListener("pointerdown", retry, { once: true, passive: true });
+    document.addEventListener("keydown", retry, { once: true });
+    return () => {
+      document.removeEventListener("pointerdown", retry);
+      document.removeEventListener("keydown", retry);
+    };
   }, [reduced, broken, index]);
 
   if (broken) return null;
