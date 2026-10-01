@@ -19,51 +19,93 @@ const WAITLIST_KEY = "normalize_waitlisted";
 const GATE_KEY = "normalize_gate_unlocked";
 const PHONE = /^[6-9][0-9]{9}$/;
 
-/* Six grounded in real Normalize facts (the two editions, the coin's own Y
-   flip, "everything else is noise", bags vs apparel, the Chennai workshop,
-   the one-thing-at-a-time ethos) plus a materials one — never invented
-   lifestyle filler. ONE is picked at random per visit; this pool is never
-   shown in full at once. */
-const QUESTIONS = [
-  { q: "Dawn or Dusk?", options: [
-      { label: "Dawn", reveal: "Warm sand. First light." },
-      { label: "Dusk", reveal: "Slate blue. Last light." },
-      { label: "Let the coin decide", reveal: "Fair enough.", wild: true },
-  ]},
-  { q: "Heads or Tails?", options: [
-      { label: "Heads", reveal: "Face-on. No zoom-in journey." },
-      { label: "Tails", reveal: "The other side matters too." },
-      { label: "Let the coin decide", reveal: "Fair enough.", wild: true },
-  ]},
-  { q: "Quiet or Loud?", options: [
-      { label: "Quiet", reveal: "Good. That's the whole point." },
-      { label: "Loud", reveal: "Everything else is noise. This isn't." },
-      { label: "Let the coin decide", reveal: "Fair enough.", wild: true },
-  ]},
-  { q: "Carry it or Wear it?", options: [
-      { label: "Carry it", reveal: "Cut for the ordinary Tuesday." },
-      { label: "Wear it", reveal: "Built to be boring, on purpose." },
-      { label: "Let the coin decide", reveal: "Fair enough.", wild: true },
-  ]},
-  { q: "Chennai or Everywhere?", options: [
-      { label: "Chennai", reveal: "Cut and stitched where we can see it." },
-      { label: "Everywhere", reveal: "Small runs. Big intentions." },
-      { label: "Let the coin decide", reveal: "Fair enough.", wild: true },
-  ]},
-  { q: "One thing or Everything?", options: [
-      { label: "One thing", reveal: "One thing at a time, properly." },
-      { label: "Everything", reveal: "Ambitious. We're still on the first one." },
-      { label: "Let the coin decide", reveal: "Fair enough.", wild: true },
-  ]},
-  { q: "Woven or Stitched?", options: [
-      { label: "Woven", reveal: "The weave stays open, on purpose." },
-      { label: "Stitched", reveal: "Box-stitched where the load actually sits." },
-      { label: "Let the coin decide", reveal: "Fair enough.", wild: true },
-  ]},
+/* The nineteen this-or-that questions, straight from the reference sheet
+   ("Normalize Loops & Questions") rather than the brand-fact set this started
+   with — on request, swapped for exact parity with that page. Each is just
+   the question text; the two options are derived by splitting on " or ",
+   the same way that sheet's own script builds its table, so there is one
+   source of truth for the wording and nothing to keep in sync by hand. */
+const QUESTION_TEXT = [
+  "Late nights or early mornings?", "Oversized or fitted?", "Black or white?",
+  "Text back or leave on read?", "Chai or coffee?", "Sneakers or loafers?",
+  "Stay in or go out?", "Plans or plot twists?", "Gold or silver?",
+  "Window seat or aisle?", "Voice note or call?", "Repeat the outfit or never again?",
+  "Main character or side character?", "Early to the party or fashionably late?",
+  "Night drive or long walk?", "Shuffle or repeat?", "Linen or denim?",
+  "Dress up or dress down?", "Heads or tails?",
 ];
 
-function pickQuestion() {
-  return QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const QUESTIONS = QUESTION_TEXT.map((q) => {
+  const [a, b] = q.replace(/\?$/, "").split(" or ");
+  return { q, a: cap(a), b: cap(b) };
+});
+
+/* Two small pools rather than one bespoke line per answer: which option
+   someone picked matters less here than whether they picked it themselves or
+   handed it to the coin, so the reveal is drawn at random from whichever pool
+   matches that — not keyed to the specific answer. */
+const CHOSEN_LINES = [
+  "Normal. Now get on the list before the doors open.",
+  "Noted. You'd fit right in.",
+  "Good answer. The list is short on people like you.",
+  "Decided. That's the first step. Early access is the second.",
+];
+const COIN_LINES = [
+  "The coin has spoken. So have we: you're early.",
+  "You didn't choose. The coin did. The list is still your call.",
+  "Fate picked the answer. You pick early access.",
+  "Some things you leave to the coin. This one you shouldn't.",
+];
+
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+function pickQuestion() { return pick(QUESTIONS); }
+
+/* One of five vertical background loops, picked at random per mount — the
+   same "rotate one at random" rule the questions follow, not all five
+   layered or cycling. Files are expected at /assets/gate/loop1..5.mp4 (and
+   matching .jpg posters); until those exist this quietly renders nothing and
+   the plain dark panel underneath shows through unchanged, so shipping the
+   gate is never blocked on the clips being ready. */
+const LOOP_COUNT = 5;
+function GateVideo() {
+  const [index] = useState(() => 1 + Math.floor(Math.random() * LOOP_COUNT));
+  const [broken, setBroken] = useState(false);
+  const videoRef = useRef(null);
+
+  const reduced = typeof window !== "undefined"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* The `autoPlay` attribute alone turned out not to be enough — caught by
+     actually checking `.paused` after mount rather than trusting the
+     attribute, where it sat on the first frame doing nothing despite being
+     muted, looped and playsInline. An explicit `.play()` once the element has
+     a src is what actually starts it; the rejection is swallowed because a
+     browser that blocks it anyway should just leave the poster frame showing,
+     not log a console error. */
+  useEffect(() => {
+    if (reduced || broken) return;
+    videoRef.current?.play().catch(() => {});
+  }, [reduced, broken, index]);
+
+  if (broken) return null;
+
+  return (
+    <video
+      ref={videoRef}
+      aria-hidden="true"
+      className="absolute inset-0 h-full w-full object-cover"
+      src={`/assets/gate/loop${index}.mp4`}
+      poster={`/assets/gate/loop${index}.jpg`}
+      muted
+      loop
+      playsInline
+      autoPlay={!reduced}
+      preload="metadata"
+      onError={() => setBroken(true)}
+    />
+  );
 }
 
 export default function EarlyAccessGate({ onUnlock }) {
@@ -83,15 +125,20 @@ export default function EarlyAccessGate({ onUnlock }) {
 
   useEffect(() => () => clearTimeout(revealTimer.current), []);
 
-  const choose = (opt) => {
-    setAnswer({ question: question.q, choice: opt.label });
-    setRevealText(opt.reveal);
+  /* `viaCoin` is the only thing that decides which line pool answers from —
+     the coin resolves to a REAL choice (so the stored answer is still "Late
+     nights", never "the coin"), it just got there without being asked. */
+  const choose = (label, viaCoin = false) => {
+    setAnswer({ question: question.q, choice: label });
+    setRevealText(pick(viaCoin ? COIN_LINES : CHOSEN_LINES));
     setStep("reveal");
     clearTimeout(revealTimer.current);
     // Auto-advances on its own — a one-line reaction does not need a "next"
     // button, and onthefence.in's own interstitial does the same.
     revealTimer.current = setTimeout(() => setStep("form"), 1600);
   };
+
+  const letCoinDecide = () => choose(Math.random() < 0.5 ? question.a : question.b, true);
 
   /* ---- the signup form ---- */
   const [name, setName] = useState("");
@@ -164,6 +211,11 @@ export default function EarlyAccessGate({ onUnlock }) {
           beyond this component, the same two textures the rest of the site
           already caches. ---- */}
       <div className="relative order-first flex min-h-[320px] flex-col items-center justify-center gap-7 overflow-hidden bg-ink px-7 py-16 text-cream md:min-h-0">
+        <GateVideo />
+        {/* Dark scrim over the video so the coin and copy keep their contrast
+            whatever the clip is doing — without this a bright cut could wash
+            the gold coin out entirely. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-ink/55" />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 flex items-center justify-center select-none font-brand text-[46vw] leading-none font-extrabold text-gold/5 md:text-[26vw]"
@@ -226,21 +278,27 @@ export default function EarlyAccessGate({ onUnlock }) {
               </p>
               <hr className="doc-rule" />
               <div className="flex flex-col gap-3">
-                {question.options.map((opt) => (
-                  <button
-                    key={opt.label}
-                    onClick={() => choose(opt)}
-                    className={
-                      opt.wild
-                        ? "min-h-12 rounded-full border border-gold-dark px-6 py-3.5 text-[12px] tracking-[0.1em]\
-                           text-brown uppercase transition-colors hover:bg-gold hover:text-ink"
-                        : "min-h-12 rounded-full border border-ink bg-ink px-6 py-3.5 text-[12px] tracking-[0.1em]\
-                           text-cream uppercase transition-colors hover:bg-brown hover:border-brown"
-                    }
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+                <button
+                  onClick={() => choose(question.a)}
+                  className="min-h-12 rounded-full border border-ink bg-ink px-6 py-3.5 text-[12px] tracking-[0.1em]
+                             text-cream uppercase transition-colors hover:border-brown hover:bg-brown"
+                >
+                  {question.a}
+                </button>
+                <button
+                  onClick={() => choose(question.b)}
+                  className="min-h-12 rounded-full border border-ink bg-ink px-6 py-3.5 text-[12px] tracking-[0.1em]
+                             text-cream uppercase transition-colors hover:border-brown hover:bg-brown"
+                >
+                  {question.b}
+                </button>
+                <button
+                  onClick={letCoinDecide}
+                  className="min-h-12 rounded-full border border-gold-dark px-6 py-3.5 text-[12px] tracking-[0.1em]
+                             text-brown uppercase transition-colors hover:bg-gold hover:text-ink"
+                >
+                  Let the coin decide
+                </button>
               </div>
               <GateFooter showPassword={showPassword} setShowPassword={setShowPassword}
                 password={password} setPassword={setPassword} passwordError={passwordError}
