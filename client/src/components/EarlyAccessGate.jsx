@@ -74,11 +74,18 @@ function playCoinSound() {
     // A real recording (coin, wood surface, single toss and payout) rather
     // than synthesis — called straight from the click handler, same as the
     // version this replaced, which is what makes it a genuine user gesture
-    // and sidesteps any autoplay question entirely. 2.184s long; COIN_TOSS_MS
-    // below is read FROM this file's actual length rather than guessed, so
-    // the visual spin and the recording finish together instead of one
-    // running on its own separate timer next to the other.
-    const audio = new Audio("/assets/gate/coin-toss-v1.mp3");
+    // and sidesteps any autoplay question entirely.
+    //
+    // v2 is the original 2.184s clip extended to 4.184s: the authentic toss
+    // and initial bounce (0-0.9s) and the authentic natural decay to
+    // stillness at the end are both untouched, with five extra repeats of a
+    // real 0.5s window of the recording's own steady rattle spliced in
+    // between them. Not a time-stretch (which would have dragged the pitch
+    // and tempo of the rattle down into something that no longer sounds like
+    // a coin) and not synthesis — just more of the actual recording's own
+    // texture. COIN_TOSS_MS below is this file's real measured length, not a
+    // guess, so the visual spin and the recording finish together.
+    const audio = new Audio("/assets/gate/coin-toss-v2.mp3");
     audio.volume = 0.8;
     audio.play().catch(() => {});
   } catch {
@@ -89,7 +96,7 @@ function playCoinSound() {
 /* The real toss recording is 2.184s - the spin animation and the step timer
    both key off this ONE number rather than three independently-guessed
    durations drifting apart from each other. */
-const COIN_TOSS_MS = 2184;
+const COIN_TOSS_MS = 4184;
 
 
 /* One of five vertical background loops, picked at random per mount — the
