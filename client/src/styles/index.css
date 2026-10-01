@@ -130,6 +130,17 @@
      who happens to start a swipe on the hero coin cannot scroll the page. */
   .coin-interactive { cursor: grab; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
   .coin-interactive .coin-inner { animation: none; }
+
+  /* The gate's reveal moment: a real toss, not the ambient 7s drift above.
+     Four full turns in 1.5s with a heavy ease-out — nearly all the motion
+     spends itself in the first third, same shape as a spun coin actually
+     loses energy, so it reads as thrown hard and then settling rather than
+     just spinning quickly throughout. 1440deg lands back on a whole number
+     of turns so it rests showing a face, never caught edge-on; `both` holds
+     that landed frame instead of snapping back to 0. Needs to be declared
+     AFTER .coin-spin .coin-inner above — same specificity, so source order
+     is what lets this win when both classes are present together. */
+  .coin-toss .coin-inner { animation: coin-toss-spin 1.5s cubic-bezier(.08,.82,.17,1) 1 both; }
   .coin-interactive:active { cursor: grabbing; }
 
   .coin-sm { width: 50px; height: 50px; }
@@ -532,6 +543,7 @@
 
 @keyframes shine { to { background-position: -240% 0; } }
 @keyframes coin-rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+@keyframes coin-toss-spin { from { transform: rotateY(0deg); } to { transform: rotateY(1440deg); } }
 
 /* The bag icon's acknowledgement once a flight lands. */
 @keyframes bag-catch {
@@ -543,6 +555,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .coin-spin .coin-inner,
+  .coin-toss .coin-inner,
   .metallic-text { animation: none; }
 
   /* Canvases still arrive, they just stop being liquid about it. */

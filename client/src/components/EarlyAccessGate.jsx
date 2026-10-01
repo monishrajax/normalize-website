@@ -76,41 +76,77 @@ function playCoinSound() {
     const ctx = new Ctx();
     const now = ctx.currentTime;
 
-    // The toss: a short rising whoosh.
-    const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.22), ctx.sampleRate);
+    // The toss: a quick, sharp flick off the thumb — shorter than before,
+    // because what follows needs to read as fast, not this.
+    const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.13), ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
     const noise = ctx.createBufferSource();
     noise.buffer = noiseBuffer;
     const noiseFilter = ctx.createBiquadFilter();
     noiseFilter.type = "bandpass";
-    noiseFilter.Q.value = 0.9;
-    noiseFilter.frequency.setValueAtTime(700, now);
-    noiseFilter.frequency.exponentialRampToValueAtTime(2800, now + 0.2);
+    noiseFilter.Q.value = 1.1;
+    noiseFilter.frequency.setValueAtTime(900, now);
+    noiseFilter.frequency.exponentialRampToValueAtTime(3400, now + 0.12);
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.16, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.22);
+    noiseGain.gain.setValueAtTime(0.17, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.14);
     noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
     noise.start(now);
-    noise.stop(now + 0.25);
+    noise.stop(now + 0.16);
 
-    // The spin settling: tings spaced further apart as it slows down, same
-    // physical shape as a real flipped coin rattling to a stop.
-    const tingAt = [0.2, 0.3, 0.42, 0.56, 0.73, 0.95, 1.22];
-    tingAt.forEach((t, i) => {
+    /* The spin itself: dense, fast ticks that thin out as the coin loses
+       momentum — built from a deceleration curve rather than a hand-typed
+       list, so "starts fast, slows down" is one formula instead of guesswork.
+       Matches the faster visual spin (coin-toss-spin, 4 turns in 1.5s): this
+       is the sound of those same turns, not an independent rhythm next to it. */
+    const spinStart = 0.14;
+    const tickCount = 20;
+    let t = spinStart;
+    for (let i = 0; i < tickCount; i++) {
+      const progress = i / (tickCount - 1);                 // 0 -> 1 across the spin
+      const gap = 0.025 + progress * progress * 0.09;        // 25ms -> ~115ms: widening gap = slowing spin
+      t += gap;
       const osc = ctx.createOscillator();
       osc.type = "triangle";
-      osc.frequency.setValueAtTime(i % 2 === 0 ? 2600 : 2100, now + t);
+      osc.frequency.setValueAtTime(i % 2 === 0 ? 2500 : 2050, now + t);
       const gain = ctx.createGain();
-      const vol = 0.085 * (1 - (i / tingAt.length) * 0.5);
+      const vol = 0.07 * (1 - progress * 0.55);
       gain.gain.setValueAtTime(vol, now + t);
-      gain.gain.exponentialRampToValueAtTime(0.0003, now + t + 0.11);
+      gain.gain.exponentialRampToValueAtTime(0.0003, now + t + 0.07);
       osc.connect(gain).connect(ctx.destination);
       osc.start(now + t);
-      osc.stop(now + t + 0.13);
-    });
+      osc.stop(now + t + 0.09);
+    }
 
-    setTimeout(() => { try { ctx.close(); } catch { /* already closed */ } }, 1600);
+    /* The landing: one lower, fuller strike as it drops flat onto the
+       surface — a real thud-into-clink, not just the last spin tick fading
+       out like the rest. Two layered oscillators (a falling fundamental plus
+       a brighter harmonic) so it reads as metal hitting a hard surface
+       rather than a dull knock. */
+    const landAt = t + 0.1;
+    const landOsc = ctx.createOscillator();
+    landOsc.type = "triangle";
+    landOsc.frequency.setValueAtTime(950, now + landAt);
+    landOsc.frequency.exponentialRampToValueAtTime(420, now + landAt + 0.18);
+    const landGain = ctx.createGain();
+    landGain.gain.setValueAtTime(0.24, now + landAt);
+    landGain.gain.exponentialRampToValueAtTime(0.0004, now + landAt + 0.42);
+    landOsc.connect(landGain).connect(ctx.destination);
+    landOsc.start(now + landAt);
+    landOsc.stop(now + landAt + 0.45);
+
+    const landHarmonic = ctx.createOscillator();
+    landHarmonic.type = "sine";
+    landHarmonic.frequency.setValueAtTime(1800, now + landAt);
+    const landHarmonicGain = ctx.createGain();
+    landHarmonicGain.gain.setValueAtTime(0.1, now + landAt);
+    landHarmonicGain.gain.exponentialRampToValueAtTime(0.0003, now + landAt + 0.2);
+    landHarmonic.connect(landHarmonicGain).connect(ctx.destination);
+    landHarmonic.start(now + landAt);
+    landHarmonic.stop(now + landAt + 0.22);
+
+    setTimeout(() => { try { ctx.close(); } catch { /* already closed */ } }, (landAt + 0.6) * 1000);
   } catch {
     // A sound effect is a nice-to-have; it must never block the gate's flow.
   }
@@ -320,7 +356,7 @@ export default function EarlyAccessGate({ onUnlock }) {
           ) : step === "reveal" ? (
             <div className="flex min-h-[320px] flex-col items-center justify-center gap-6 text-center">
               <div style={{ filter: "drop-shadow(0 20px 36px rgba(21,18,16,.25))" }}>
-                <Coin size="xl" />
+                <Coin size="xl" className="coin-toss" />
               </div>
               <p className="font-display text-2xl text-ink italic md:text-3xl">{revealText}</p>
             </div>
