@@ -62,6 +62,60 @@ const COIN_LINES = [
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 function pickQuestion() { return pick(QUESTIONS); }
 
+/* A coin toss settling into a spin — synthesised, not a sound file. Two
+   reasons: it plays the instant an answer is picked, and that click IS a
+   genuine user gesture, which sidesteps the whole autoplay-policy question
+   the background video ran into entirely; and it costs nothing to ship —
+   no asset to fetch, no size to weigh against "make it light". A short
+   filtered noise burst for the toss, then a run of metallic triangle-wave
+   "tings" at decreasing intervals for the coin spinning down and settling. */
+function playCoinSound() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const now = ctx.currentTime;
+
+    // The toss: a short rising whoosh.
+    const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.22), ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.Q.value = 0.9;
+    noiseFilter.frequency.setValueAtTime(700, now);
+    noiseFilter.frequency.exponentialRampToValueAtTime(2800, now + 0.2);
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.16, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.22);
+    noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 0.25);
+
+    // The spin settling: tings spaced further apart as it slows down, same
+    // physical shape as a real flipped coin rattling to a stop.
+    const tingAt = [0.2, 0.3, 0.42, 0.56, 0.73, 0.95, 1.22];
+    tingAt.forEach((t, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(i % 2 === 0 ? 2600 : 2100, now + t);
+      const gain = ctx.createGain();
+      const vol = 0.085 * (1 - (i / tingAt.length) * 0.5);
+      gain.gain.setValueAtTime(vol, now + t);
+      gain.gain.exponentialRampToValueAtTime(0.0003, now + t + 0.11);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + t);
+      osc.stop(now + t + 0.13);
+    });
+
+    setTimeout(() => { try { ctx.close(); } catch { /* already closed */ } }, 1600);
+  } catch {
+    // A sound effect is a nice-to-have; it must never block the gate's flow.
+  }
+}
+
 /* One of five vertical background loops, picked at random per mount — the
    same "rotate one at random" rule the questions follow, not all five
    layered or cycling. Files are expected at /assets/gate/loop1..5-v2.mp4
@@ -162,13 +216,18 @@ export default function EarlyAccessGate({ onUnlock }) {
      the coin resolves to a REAL choice (so the stored answer is still "Late
      nights", never "the coin"), it just got there without being asked. */
   const choose = (label, viaCoin = false) => {
+    // Called directly from the click handler, not from an effect — this is
+    // what makes it a genuine user gesture as far as the browser's audio
+    // autoplay policy is concerned, the same reasoning the video's own fix
+    // depends on, just satisfied for free here instead of worked around.
+    playCoinSound();
     setAnswer({ question: question.q, choice: label });
     setRevealText(pick(viaCoin ? COIN_LINES : CHOSEN_LINES));
     setStep("reveal");
     clearTimeout(revealTimer.current);
-    // Auto-advances on its own — a one-line reaction does not need a "next"
-    // button, and onthefence.in's own interstitial does the same.
-    revealTimer.current = setTimeout(() => setStep("form"), 1600);
+    // Long enough for the coin to visibly complete a spin and the sound to
+    // finish settling (~1.35s), not just a one-line reaction flashing by.
+    revealTimer.current = setTimeout(() => setStep("form"), 2000);
   };
 
   const letCoinDecide = () => choose(Math.random() < 0.5 ? question.a : question.b, true);
@@ -238,47 +297,13 @@ export default function EarlyAccessGate({ onUnlock }) {
      in index.css. */
   return (
     <div className="grid min-h-dvh bg-cream md:grid-cols-2">
-      {/* ---- the dark panel: the real coin, spinning, same as the header and
-          footer — no WebGL here on purpose. This page is the first thing a
-          visitor on a slow connection ever sees, so it stays light: zero JS
-          beyond this component, the same two textures the rest of the site
-          already caches. ---- */}
-      <div className="relative order-first flex min-h-[320px] flex-col items-center justify-center gap-7 overflow-hidden bg-ink px-7 py-16 text-cream md:min-h-0">
+      {/* ---- the left panel: the video loop, alone ----
+          On request: no coin, no ghost letter, no gradient, no slogan here —
+          just whichever of the five clips this visit picked, filling the
+          panel. The coin moves to the content panel instead, where it
+          becomes the spin-to-reveal moment after an answer is picked. */}
+      <div className="relative order-first min-h-[320px] overflow-hidden bg-ink md:min-h-0">
         <GateVideo />
-        {/* Dark scrim over the video so the coin and copy keep their contrast
-            whatever the clip is doing — without this a bright cut could wash
-            the gold coin out entirely. */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-ink/55" />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 flex items-center justify-center select-none font-brand text-[46vw] leading-none font-extrabold text-gold/5 md:text-[26vw]"
-          style={{ fontStretch: "125%" }}
-        >
-          N
-        </div>
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(60% 55% at 50% 38%, rgba(212,175,55,.16), transparent 70%)" }}
-        />
-        <div className="relative z-10" style={{ filter: "drop-shadow(0 24px 48px rgba(0,0,0,.5))" }}>
-          <Coin size="xl" />
-        </div>
-        <div className="relative z-10 flex flex-col items-center gap-3 text-center">
-          <p className="font-display text-xl text-gold-light italic">&ldquo;Let the Coin Decide.&rdquo;</p>
-          <a
-            href="https://www.instagram.com/thenormalize/"
-            target="_blank"
-            rel="noopener"
-            className="inline-flex items-center gap-2 rounded-full border border-gold/35 px-4 py-2.5
-                       text-[11px] tracking-[0.14em] text-cream/80 transition-colors hover:border-gold hover:text-gold-light"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-3.5 w-3.5">
-              <rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.2" cy="6.8" r="1" />
-            </svg>
-            @thenormalize
-          </a>
-        </div>
       </div>
 
       {/* ---- the content panel ---- */}
@@ -293,13 +318,11 @@ export default function EarlyAccessGate({ onUnlock }) {
               </p>
             </>
           ) : step === "reveal" ? (
-            <div className="flex min-h-[320px] flex-col items-center justify-center gap-5 text-center">
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-6 text-center">
+              <div style={{ filter: "drop-shadow(0 20px 36px rgba(21,18,16,.25))" }}>
+                <Coin size="xl" />
+              </div>
               <p className="font-display text-2xl text-ink italic md:text-3xl">{revealText}</p>
-              <span className="flex gap-1.5" aria-hidden="true">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-dark" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-dark [animation-delay:150ms]" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-dark [animation-delay:300ms]" />
-              </span>
             </div>
           ) : step === "question" ? (
             <>
@@ -411,32 +434,49 @@ export default function EarlyAccessGate({ onUnlock }) {
 }
 
 /* The bottom-of-form password escape hatch, shared by the question and form
-   steps so the one way past the gate is never more than a scroll away. */
+   steps so the one way past the gate is never more than a scroll away. Also
+   carries the Instagram link, which used to live on the video panel — moved
+   here rather than deleted when that panel was cleared down to the clip
+   alone, so the real handle doesn't just vanish along with the decoration. */
 function GateFooter({ showPassword, setShowPassword, password, setPassword, passwordError, onPasswordSubmit, hasPassword }) {
-  if (!hasPassword) return null;
   return (
-    <div className="mt-8 border-t border-line pt-6">
-      {showPassword ? (
-        <form onSubmit={onPasswordSubmit} className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[160px] flex-1">
-            <span className="mb-2 block text-[11px] tracking-[0.16em] text-brown uppercase">Password</span>
-            <input
-              type="password" value={password}
-              onChange={(e) => { setPassword(e.target.value); }}
-              autoFocus className="field"
-            />
-          </label>
-          <button type="submit" className="min-h-11 border border-ink px-5 py-2.5 text-[11px] tracking-[0.12em] text-ink uppercase">
-            Enter
+    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
+      <div>
+        {!hasPassword ? null : showPassword ? (
+          <form onSubmit={onPasswordSubmit} className="flex flex-wrap items-end gap-3">
+            <label className="min-w-[160px] flex-1">
+              <span className="mb-2 block text-[11px] tracking-[0.16em] text-brown uppercase">Password</span>
+              <input
+                type="password" value={password}
+                onChange={(e) => { setPassword(e.target.value); }}
+                autoFocus className="field"
+              />
+            </label>
+            <button type="submit" className="min-h-11 border border-ink px-5 py-2.5 text-[11px] tracking-[0.12em] text-ink uppercase">
+              Enter
+            </button>
+          </form>
+        ) : (
+          <button type="button" onClick={() => setShowPassword(true)}
+            className="min-h-11 text-[12px] text-brown underline underline-offset-4">
+            Enter using password
           </button>
-        </form>
-      ) : (
-        <button type="button" onClick={() => setShowPassword(true)}
-          className="min-h-11 text-[12px] text-brown underline underline-offset-4">
-          Enter using password
-        </button>
-      )}
-      {passwordError && <p className="mt-2 text-xs text-brown">{passwordError}</p>}
+        )}
+        {passwordError && <p className="mt-2 text-xs text-brown">{passwordError}</p>}
+      </div>
+
+      <a
+        href="https://www.instagram.com/thenormalize/"
+        target="_blank"
+        rel="noopener"
+        className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2.5
+                   text-[11px] tracking-[0.14em] text-brown transition-colors hover:border-gold-dark hover:text-ink"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-3.5 w-3.5">
+          <rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.2" cy="6.8" r="1" />
+        </svg>
+        @thenormalize
+      </a>
     </div>
   );
 }
