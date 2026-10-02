@@ -285,9 +285,15 @@ function CoinToss({ questionA, questionB, onDone }) {
    The gate itself.
 --------------------------------------------------------------------------- */
 export default function EarlyAccessGate({ onUnlock }) {
+  /* "already" is a real step, not a flag that keeps re-asserting itself over
+     every other render — it decides where a RETURNING, already-signed-up
+     visitor lands on first paint, nothing more. Without that distinction,
+     "Ask me another" could not do what it says for someone who has already
+     submitted once: the flag would keep winning and snap them straight back
+     to the reassurance screen no matter what step they tried to move to. */
   const [alreadyOnList, setAlreadyOnList] = useState(() => storage(WAITLIST_KEY) === "1");
-
-  const [step, setStep] = useState("ask");               // ask -> toss -> result -> done
+  const [step, setStep] = useState(() => (storage(WAITLIST_KEY) === "1" ? "already" : "ask"));
+                                                           // already | ask -> toss -> result -> done
   const [question, setQuestion] = useState(pickQuestion);
   const [tossKey, setTossKey] = useState(0);              // bumped to remount CoinToss on a retoss
   const [answer, setAnswer] = useState(null);             // { pick, byCoin, side }
@@ -426,7 +432,7 @@ export default function EarlyAccessGate({ onUnlock }) {
       </header>
 
       <section key={step} className="fade-in mt-[34px] flex w-full flex-col items-center text-center">
-        {alreadyOnList && step !== "done" ? (
+        {step === "already" ? (
           <>
             <p className="text-[11px] tracking-[0.28em] uppercase" style={{ color: gold }}>Early access</p>
             <h1 className="my-3 font-display text-[clamp(34px,9.4vw,44px)] leading-[1.08] italic">
@@ -435,6 +441,13 @@ export default function EarlyAccessGate({ onUnlock }) {
             <p className="max-w-[32ch]" style={{ color: muted }}>
               We'll message you on WhatsApp before the doors open.
             </p>
+            <button
+              type="button" onClick={askAnother}
+              className="mt-5 px-2 py-1.5 text-[12px] tracking-[0.12em] uppercase underline underline-offset-4"
+              style={{ color: muted }}
+            >
+              Ask me another
+            </button>
           </>
         ) : step === "ask" ? (
           <>
