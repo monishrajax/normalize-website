@@ -425,7 +425,7 @@ export default function EarlyAccessGate({ onUnlock }) {
         </span>
       </header>
 
-      <section className="mt-[34px] flex w-full flex-col items-center text-center">
+      <section key={step} className="fade-in mt-[34px] flex w-full flex-col items-center text-center">
         {alreadyOnList && step !== "done" ? (
           <>
             <p className="text-[11px] tracking-[0.28em] uppercase" style={{ color: gold }}>Early access</p>
