@@ -144,8 +144,7 @@ function Film() {
 
   return (
     <div
-      className="relative w-full overflow-hidden bg-black"
-      style={{ aspectRatio: "4 / 5", maxHeight: "56vh" }}
+      className="relative w-full shrink-0 overflow-hidden bg-black aspect-[4/5] max-h-[56vh] md:aspect-auto md:h-dvh md:max-h-none md:w-1/2"
     >
       <video
         ref={videoRef}
@@ -160,11 +159,22 @@ function Film() {
         preload="auto"
         disablePictureInPicture
       />
+      {/* Mobile: fades into the content that sits below the film. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 md:hidden"
         style={{
           background: "linear-gradient(to bottom, rgba(13,12,10,.15) 0%, rgba(13,12,10,0) 35%, rgba(13,12,10,.55) 78%, #0d0c0a 100%)",
+        }}
+      />
+      {/* Desktop: the film is a full-height left column, content sits beside
+          it rather than under it — fade toward that seam instead of the
+          floor. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 hidden md:block"
+        style={{
+          background: "linear-gradient(to right, rgba(13,12,10,0) 60%, #0d0c0a 100%)",
         }}
       />
       {!reduced && !playing && (
@@ -466,19 +476,19 @@ export default function EarlyAccessGate({ onUnlock }) {
     muted = "#968c7a", gold = "#d6b066";
 
   return (
-    <div className="min-h-dvh w-full" style={{ background: ink, colorScheme: "dark" }}>
-    {/* Full page width — on anything wider than a phone, a 480px reading
-        column with nothing beside it reads as a card abandoned in a dead
-        void. The film spans the whole viewport; only the text and buttons
-        stay narrow, underneath it. */}
+    <div className="min-h-dvh w-full md:flex" style={{ background: ink, colorScheme: "dark" }}>
+    {/* Mobile: the film sits full-width above the content, which follows
+        below it. Desktop (md+): a proper two-column split — the film is a
+        full-height left column, the content is vertically centred beside
+        it on the right, never stacked under a lonely strip of video. */}
     <Film />
     <main
-      className="mx-auto flex max-w-[480px] flex-col items-center px-5 pb-10 antialiased"
+      className="mx-auto flex w-full max-w-[480px] flex-col items-center px-5 pb-10 antialiased md:my-auto md:w-1/2 md:px-10"
       style={{ color: cream, fontFamily: "var(--font-mono)" }}
     >
       {/* Brand — overlaps the bottom of the film. The real wordmark treatment
           stands in for a separate wordmark image; the coin IS the emblem. */}
-      <header className="relative z-[2] -mt-16 flex flex-col items-center gap-3.5">
+      <header className="relative z-[2] -mt-16 flex flex-col items-center gap-3.5 md:mt-0">
         <img
           src="/assets/coin-front.webp"
           alt=""
