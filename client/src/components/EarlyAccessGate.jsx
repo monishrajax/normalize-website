@@ -103,9 +103,18 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 function Film() {
   const videoRef = useRef(null);
   const [index] = useState(() => 1 + Math.floor(Math.random() * LOOP_COUNT));
+  const [playing, setPlaying] = useState(false);
   const reduced = typeof window !== "undefined"
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* Safari — desktop and iOS — can refuse even a muted, playsInline,
+     autoplay video outright: under Low Power Mode, or on a domain's first
+     few visits before it has "learned" the site is trustworthy. Neither is
+     something script can force past. So this retries on every signal the
+     element gives that it's ready (metadata/data/canplay, visibility
+     regained, the visitor's first tap anywhere) AND tracks whether playback
+     actually started — if it hasn't, our own branded play button sits over
+     the frame instead of leaving Safari's bare icon on a black rectangle. */
   useEffect(() => {
     const v = videoRef.current;
     if (!v || reduced) return;
@@ -115,10 +124,19 @@ function Film() {
     const tryPlay = () => v.play().catch(() => {});
     tryPlay();
 
+    const events = ["loadedmetadata", "loadeddata", "canplay"];
+    events.forEach((e) => v.addEventListener(e, tryPlay));
+    const onPlaying = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    v.addEventListener("playing", onPlaying);
+    v.addEventListener("pause", onPause);
     const onVisible = () => { if (!document.hidden) tryPlay(); };
     document.addEventListener("visibilitychange", onVisible);
     document.addEventListener("pointerdown", tryPlay, { once: true, passive: true });
     return () => {
+      events.forEach((e) => v.removeEventListener(e, tryPlay));
+      v.removeEventListener("playing", onPlaying);
+      v.removeEventListener("pause", onPause);
       document.removeEventListener("visibilitychange", onVisible);
       document.removeEventListener("pointerdown", tryPlay);
     };
@@ -126,12 +144,12 @@ function Film() {
 
   return (
     <div
-      aria-hidden="true"
       className="relative mx-[-20px] w-[calc(100%+40px)] overflow-hidden bg-black"
       style={{ aspectRatio: "4 / 5", maxHeight: "56vh" }}
     >
       <video
         ref={videoRef}
+        aria-hidden="true"
         className="absolute inset-0 h-full w-full object-cover"
         style={{ objectPosition: "50% 45%" }}
         src={`/assets/gate/loop${index}-v2.mp4`}
@@ -143,11 +161,29 @@ function Film() {
         disablePictureInPicture
       />
       <div
+        aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
           background: "linear-gradient(to bottom, rgba(13,12,10,.15) 0%, rgba(13,12,10,0) 35%, rgba(13,12,10,.55) 78%, #0d0c0a 100%)",
         }}
       />
+      {!reduced && !playing && (
+        <button
+          type="button"
+          onClick={() => videoRef.current?.play().catch(() => {})}
+          aria-label="Play film"
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          <span
+            className="flex h-14 w-14 items-center justify-center rounded-full backdrop-blur-sm"
+            style={{ background: "rgba(13,12,10,.55)", border: "1px solid rgba(214,176,102,.6)" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="#d6b066" style={{ marginLeft: 2 }}>
+              <path d="M5 3.5v13l12-6.5z" />
+            </svg>
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -175,6 +211,9 @@ function CoinToss({ questionA, questionB, onDone }) {
       if (!Ctx) return;
       if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
       const ctx = audioCtxRef.current;
+      // Safari sometimes hands back a context that's still "suspended" even
+      // from a genuine click — resume() is a no-op everywhere else.
+      if (ctx.state === "suspended") ctx.resume();
       const master = ctx.createGain();
       master.gain.value = 0.12;
       master.connect(ctx.destination);
@@ -249,11 +288,11 @@ function CoinToss({ questionA, questionB, onDone }) {
 
   return (
     <div className="flex w-full flex-col items-center pt-2.5">
-      <div className="relative" style={{ width: 190, height: 300, perspective: 900 }}>
+      <div className="relative" style={{ width: 190, height: 300, perspective: 900, WebkitPerspective: 900 }}>
         <div
           ref={coinRef}
           className="absolute bottom-[34px] left-0"
-          style={{ width: 190, height: 190, transformStyle: "preserve-3d" }}
+          style={{ width: 190, height: 190, transformStyle: "preserve-3d", WebkitTransformStyle: "preserve-3d" }}
         >
           <div
             className="absolute inset-0 rounded-full"
