@@ -1,30 +1,54 @@
-import { useEffect, useRef, useState } from "react";
-import Coin from "./Coin";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 
 /* The early-access gate — fronts the entire site while VITE_EARLY_ACCESS is
-   "true". Modelled on onthefence.in's own password-gate flow, checked by
-   actually clicking through it rather than going off a screenshot: land on
-   it, answer ONE rotating yes/no-shaped question (never a form alongside
-   it), get a one-line reaction, then — and only then — the signup form.
-   Reload and you get a different question; it is never the same six-or-so
-   questions shown all at once.
+   "true". Rebuilt against a full, precise spec handed over directly (single
+   -column mobile layout, a physical coin toss via the Web Animations API, a
+   synthesised ting, a real confirmation ticket) rather than the looser
+   two-column version this replaces — see the commit message for exactly what
+   changed and why, since several things here deliberately reverse recent
+   decisions (a synthesised sound again, not the real recording; a dark,
+   gate-only palette, not the site's cream one; one column, not two).
 
    This is not a <Panel>. Every other full-viewport canvas on the site has a
    close button and sits ON TOP of a site that still exists underneath; this
    one IS the site for as long as the flag is on, so there is nothing to
-   close back to. App.jsx renders it in place of everything else. */
+   close back to. App.jsx renders it in place of everything else.
+
+   No new image assets were required to build this. The spec calls for
+   emblem.webp / wordmark.webp / coin-heads.webp / coin-tails.webp; this reuses
+   what the rest of the site already has instead — the real wordmark's own
+   gold-gradient text treatment (.metallic-text, the same font-stretch:125%
+   Archivo used in the header) stands in for a wordmark image, and the real
+   coin-front.webp / coin-back.webp (already installed, already used
+   elsewhere) are the two coin faces. The five video loops are the ones
+   already compressed and installed from the last pass (loop1-v2.mp4 etc.),
+   referenced by their real names rather than the spec's loop1.mp4 — same five
+   clips, no new files needed. */
 
 const WAITLIST_KEY = "normalize_waitlisted";
 const GATE_KEY = "normalize_gate_unlocked";
+const LAST_Q_KEY = "nz_last_q";
 const PHONE = /^[6-9][0-9]{9}$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const LOOP_COUNT = 5;
 
-/* The nineteen this-or-that questions, straight from the reference sheet
-   ("Normalize Loops & Questions") rather than the brand-fact set this started
-   with — on request, swapped for exact parity with that page. Each is just
-   the question text; the two options are derived by splitting on " or ",
-   the same way that sheet's own script builds its table, so there is one
-   source of truth for the wording and nothing to keep in sync by hand. */
+/* Reads/writes localStorage through one place, swallowing failures — a
+   private window or a blocked storage API must degrade to "always ask a
+   question", never crash the gate. */
+function storage(key, value) {
+  try {
+    if (value === undefined) return localStorage.getItem(key);
+    localStorage.setItem(key, value);
+  } catch {
+    return null;
+  }
+}
+
+/* The nineteen this-or-that questions, in the exact order specified. Each is
+   just the question text; the two options are derived by splitting on
+   " or " — one source of truth for the wording, nothing to keep in sync
+   by hand. */
 const QUESTION_TEXT = [
   "Late nights or early mornings?", "Oversized or fitted?", "Black or white?",
   "Text back or leave on read?", "Chai or coffee?", "Sneakers or loafers?",
@@ -42,10 +66,19 @@ const QUESTIONS = QUESTION_TEXT.map((q) => {
   return { q, a: cap(a), b: cap(b) };
 });
 
-/* Two small pools rather than one bespoke line per answer: which option
-   someone picked matters less here than whether they picked it themselves or
-   handed it to the coin, so the reveal is drawn at random from whichever pool
-   matches that — not keyed to the specific answer. */
+/* Picked at random, but never the same question twice in a row — "Ask me
+   another" would otherwise sometimes do nothing visible. Persisted so a
+   reload doesn't just repeat whatever was last on screen either. */
+function pickQuestion() {
+  if (QUESTIONS.length < 2) return QUESTIONS[0];
+  const last = storage(LAST_Q_KEY);
+  let next;
+  do { next = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)]; }
+  while (next.q === last);
+  storage(LAST_Q_KEY, next.q);
+  return next;
+}
+
 const CHOSEN_LINES = [
   "Normal. Now get on the list before the doors open.",
   "Noted. You'd fit right in.",
@@ -58,208 +91,296 @@ const COIN_LINES = [
   "Fate picked the answer. You pick early access.",
   "Some things you leave to the coin. This one you shouldn't.",
 ];
-
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-function pickQuestion() { return pick(QUESTIONS); }
 
-/* A coin toss settling into a spin — synthesised, not a sound file. Two
-   reasons: it plays the instant an answer is picked, and that click IS a
-   genuine user gesture, which sidesteps the whole autoplay-policy question
-   the background video ran into entirely; and it costs nothing to ship —
-   no asset to fetch, no size to weigh against "make it light". A short
-   filtered noise burst for the toss, then a run of metallic triangle-wave
-   "tings" at decreasing intervals for the coin spinning down and settling. */
-function playCoinSound() {
-  try {
-    // A real recording (coin, wood surface, single toss and payout) rather
-    // than synthesis — called straight from the click handler, same as the
-    // version this replaced, which is what makes it a genuine user gesture
-    // and sidesteps any autoplay question entirely.
-    //
-    // v2 is the original 2.184s clip extended to 4.184s: the authentic toss
-    // and initial bounce (0-0.9s) and the authentic natural decay to
-    // stillness at the end are both untouched, with five extra repeats of a
-    // real 0.5s window of the recording's own steady rattle spliced in
-    // between them. Not a time-stretch (which would have dragged the pitch
-    // and tempo of the rattle down into something that no longer sounds like
-    // a coin) and not synthesis — just more of the actual recording's own
-    // texture. COIN_TOSS_MS below is this file's real measured length, not a
-    // guess, so the visual spin and the recording finish together.
-    const audio = new Audio("/assets/gate/coin-toss-v2.mp3");
-    audio.volume = 0.8;
-    audio.play().catch(() => {});
-  } catch {
-    // A sound effect is a nice-to-have; it must never block the gate's flow.
-  }
-}
-
-/* The real toss recording is 2.184s - the spin animation and the step timer
-   both key off this ONE number rather than three independently-guessed
-   durations drifting apart from each other. */
-const COIN_TOSS_MS = 4184;
-
-
-/* One of five vertical background loops, picked at random per mount — the
-   same "rotate one at random" rule the questions follow, not all five
-   layered or cycling. Files are expected at /assets/gate/loop1..5-v2.mp4
-   (and matching .jpg posters); until those exist this quietly renders nothing
-   and the plain dark panel underneath shows through unchanged, so shipping
-   the gate is never blocked on the clips being ready.
-
-   The "-v2" is load-bearing, not cosmetic. vercel.json sets
-   `Cache-Control: public, max-age=31536000, immutable` on everything under
-   /assets/ — correct for Vite's own hashed JS/CSS output, but these clips are
-   a plain static passthrough with no hash of their own. The first upload and
-   a later re-compress both replaced the bytes under the SAME filename, and
-   `immutable` tells every browser and CDN edge that already fetched either
-   one to never check again — for up to a year. Bumping the suffix is what
-   actually changes the URL, which is the only thing that forces a fresh
-   fetch under this header; silently overwriting loop1.mp4 a third time would
-   just repeat the exact bug this fixes. The next real change here needs a
-   "-v3" (or better, swap to a hash), not another overwrite. */
-const LOOP_COUNT = 5;
-function GateVideo() {
-  const [index] = useState(() => 1 + Math.floor(Math.random() * LOOP_COUNT));
-  const [broken, setBroken] = useState(false);
+/* ---------------------------------------------------------------------------
+   The film — one of five loops, picked at random per mount. Mirrors the spec
+   closely: play immediately without waiting for canplay, retry on the tab
+   becoming visible again and on the visitor's first tap, and go
+   poster-only (here: just paused on whatever frame loaded) under reduced
+   motion rather than autoplaying at all.
+--------------------------------------------------------------------------- */
+function Film() {
   const videoRef = useRef(null);
-
+  const [index] = useState(() => 1 + Math.floor(Math.random() * LOOP_COUNT));
   const reduced = typeof window !== "undefined"
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* Neither the `autoPlay` attribute nor a plain `.play()` call was actually
-     starting playback — checked by reading `.paused` after mount, not just
-     trusting either one. The cause is a known React/<video> gap: setting
-     `muted` as a JSX prop writes the ATTRIBUTE, but the browser's autoplay
-     gate checks the live `muted` IDL PROPERTY, and React does not reliably
-     sync that property from the attribute before the browser evaluates
-     whether to allow this clip to autoplay. The fix is to set `.muted` (and
-     `.defaultMuted`, for the loop restarting cleanly) on the actual DOM node
-     imperatively, BEFORE calling `.play()`, rather than trusting JSX for it.
-     The rejection is still swallowed — a browser that blocks it regardless
-     should just leave the poster frame showing, not log a console error. */
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el || reduced || broken) return;
-    el.muted = true;
-    el.defaultMuted = true;
-    el.play().catch(() => {});
+    const v = videoRef.current;
+    if (!v || reduced) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    const tryPlay = () => v.play().catch(() => {});
+    tryPlay();
 
-    /* Belt and braces: whatever is left of a real autoplay restriction after
-       the fix above, the visitor's own first tap or click is a genuine user
-       gesture no policy blocks — and this page guarantees one arrives soon,
-       since getting past the gate means pressing one of the three question
-       buttons. Retries once on the first interaction, then gets out of the
-       way; a clip that's already playing just gets a harmless extra .play(). */
-    const retry = () => el.play().catch(() => {});
-    document.addEventListener("pointerdown", retry, { once: true, passive: true });
-    document.addEventListener("keydown", retry, { once: true });
+    const onVisible = () => { if (!document.hidden) tryPlay(); };
+    document.addEventListener("visibilitychange", onVisible);
+    document.addEventListener("pointerdown", tryPlay, { once: true, passive: true });
     return () => {
-      document.removeEventListener("pointerdown", retry);
-      document.removeEventListener("keydown", retry);
+      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("pointerdown", tryPlay);
     };
-  }, [reduced, broken, index]);
-
-  if (broken) return null;
+  }, [reduced]);
 
   return (
-    <video
-      ref={videoRef}
+    <div
       aria-hidden="true"
-      className="absolute inset-0 h-full w-full object-cover"
-      src={`/assets/gate/loop${index}-v2.mp4`}
-      poster={`/assets/gate/loop${index}-v2.jpg`}
-      muted
-      loop
-      playsInline
-      autoPlay={!reduced}
-      preload="auto"
-      onError={() => setBroken(true)}
-    />
+      className="relative mx-[-20px] w-[calc(100%+40px)] overflow-hidden bg-black"
+      style={{ aspectRatio: "4 / 5", maxHeight: "56vh" }}
+    >
+      <video
+        ref={videoRef}
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ objectPosition: "50% 45%" }}
+        src={`/assets/gate/loop${index}-v2.mp4`}
+        muted
+        playsInline
+        autoPlay={!reduced}
+        loop
+        preload="auto"
+        disablePictureInPicture
+      />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: "linear-gradient(to bottom, rgba(13,12,10,.15) 0%, rgba(13,12,10,0) 35%, rgba(13,12,10,.55) 78%, #0d0c0a 100%)",
+        }}
+      />
+    </div>
   );
 }
 
+/* ---------------------------------------------------------------------------
+   The coin toss — a real physical arc via the Web Animations API, not a
+   continuous spin: it rises, flips face to face, and drops back down with a
+   shadow that shrinks and returns in sync. Runs once per mount; the parent
+   remounts this (via a key) each time the visitor tosses again.
+--------------------------------------------------------------------------- */
+function CoinToss({ questionA, questionB, onDone }) {
+  const coinRef = useRef(null);
+  const shadowRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const [caption, setCaption] = useState("Letting the coin decide");
+
+  /* Three sine tones layered into one metallic "ting", synthesised rather
+     than a recording — no file to fetch, and calling it straight from this
+     effect (which only ever runs as a direct result of the visitor's own
+     click on "Let the coin decide") is still a genuine user gesture as far
+     as the browser's autoplay policy is concerned. */
+  const playTing = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+      const ctx = audioCtxRef.current;
+      const master = ctx.createGain();
+      master.gain.value = 0.12;
+      master.connect(ctx.destination);
+      const now = ctx.currentTime;
+      [[2350, 1.1, 1], [6486, 0.5, 0.5], [12690, 0.25, 0.3]].forEach(([freq, time, gain]) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(gain, now);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + time);
+        osc.connect(g).connect(master);
+        osc.start(now);
+        osc.stop(now + time + 0.05);
+      });
+    } catch {
+      // A sound effect is a nice-to-have; it must never block the toss.
+    }
+  }, []);
+
+  useEffect(() => {
+    const coin = coinRef.current;
+    const shadow = shadowRef.current;
+    if (!coin) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const heads = Math.random() < 0.5;
+    const side = heads ? "heads" : "tails";
+
+    if (reduced || !coin.animate) {
+      coin.style.transform = `rotateX(${heads ? 0 : 180}deg)`;
+      setCaption(heads ? "Heads" : "Tails");
+      const t = setTimeout(() => onDone(side), 700);
+      return () => clearTimeout(t);
+    }
+
+    const spins = 6 + Math.floor(Math.random() * 3);
+    const end = spins * 360 + (heads ? 0 : 180);
+    const duration = 1700;
+
+    playTing();
+    const coinAnim = coin.animate(
+      [
+        { transform: "translateY(0) rotateX(0deg) scale(1)", easing: "cubic-bezier(.2,.7,.35,1)" },
+        { offset: 0.45, transform: `translateY(-150px) rotateX(${end * 0.55}deg) scale(1.08)`, easing: "cubic-bezier(.55,0,.8,.35)" },
+        { offset: 0.88, transform: `translateY(0) rotateX(${end - 12}deg) scale(1)` },
+        { offset: 0.94, transform: `translateY(-10px) rotateX(${end + 4}deg) scale(1)` },
+        { transform: `translateY(0) rotateX(${end}deg) scale(1)` },
+      ],
+      { duration, fill: "forwards" }
+    );
+    shadow?.animate(
+      [
+        { transform: "scale(1)", opacity: 1 },
+        { offset: 0.45, transform: "scale(.45)", opacity: 0.35 },
+        { offset: 0.88, transform: "scale(1)", opacity: 1 },
+        { transform: "scale(1)", opacity: 1 },
+      ],
+      { duration, fill: "forwards" }
+    );
+
+    let settleTimer;
+    coinAnim.onfinish = () => {
+      playTing();
+      setCaption(heads ? `Heads · ${questionA}` : `Tails · ${questionB}`);
+      settleTimer = setTimeout(() => onDone(side), 900);
+    };
+    return () => clearTimeout(settleTimer);
+    // Runs once per mount by design — the parent remounts this component
+    // (via a key bump) for a retoss rather than this effect re-running.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="flex w-full flex-col items-center pt-2.5">
+      <div className="relative" style={{ width: 190, height: 300, perspective: 900 }}>
+        <div
+          ref={coinRef}
+          className="absolute bottom-[34px] left-0"
+          style={{ width: 190, height: 190, transformStyle: "preserve-3d" }}
+        >
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+          >
+            <img src="/assets/coin-front.webp" alt="Heads" className="block h-full w-full rounded-full" />
+          </div>
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateX(180deg)" }}
+          >
+            <img src="/assets/coin-back.webp" alt="Tails" className="block h-full w-full rounded-full" />
+          </div>
+        </div>
+        <div
+          ref={shadowRef}
+          className="absolute bottom-[14px] left-1/2 h-[18px] w-[150px] -ml-[75px] rounded-full"
+          style={{ background: "radial-gradient(closest-side, rgba(0,0,0,.75), rgba(0,0,0,0))" }}
+        />
+      </div>
+      <div className="min-h-[28px] text-[12px] tracking-[0.24em] uppercase" style={{ color: "#d6b066" }}>
+        {caption}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   The gate itself.
+--------------------------------------------------------------------------- */
 export default function EarlyAccessGate({ onUnlock }) {
-  /* A visitor who already signed up does not get re-asked the question on
-     every return trip — they land straight on the "you're on the list"
-     state. This is NOT the same as unlocking the site: the product still
-     is not live for them, only the gate's own nagging stops. */
-  const [alreadyOnList, setAlreadyOnList] = useState(() => {
-    try { return localStorage.getItem(WAITLIST_KEY) === "1"; } catch { return false; }
-  });
+  const [alreadyOnList, setAlreadyOnList] = useState(() => storage(WAITLIST_KEY) === "1");
 
-  const [question] = useState(pickQuestion);
-  const [step, setStep] = useState("question"); // question -> reveal -> form
-  const [answer, setAnswer] = useState(null);    // { question, choice }
-  const [revealText, setRevealText] = useState("");
-  const revealTimer = useRef(null);
+  const [step, setStep] = useState("ask");               // ask -> toss -> result -> done
+  const [question, setQuestion] = useState(pickQuestion);
+  const [tossKey, setTossKey] = useState(0);              // bumped to remount CoinToss on a retoss
+  const [answer, setAnswer] = useState(null);             // { pick, byCoin, side }
+  const [verdictLabel, setVerdictLabel] = useState("");
+  const [verdictLine, setVerdictLine] = useState("");
 
-  useEffect(() => () => clearTimeout(revealTimer.current), []);
-
-  /* `viaCoin` is the only thing that decides which line pool answers from —
-     the coin resolves to a REAL choice (so the stored answer is still "Late
-     nights", never "the coin"), it just got there without being asked. */
-  const choose = (label, viaCoin = false) => {
-    // Called directly from the click handler, not from an effect — this is
-    // what makes it a genuine user gesture as far as the browser's audio
-    // autoplay policy is concerned, the same reasoning the video's own fix
-    // depends on, just satisfied for free here instead of worked around.
-    playCoinSound();
-    setAnswer({ question: question.q, choice: label });
-    setRevealText(pick(viaCoin ? COIN_LINES : CHOSEN_LINES));
-    setStep("reveal");
-    clearTimeout(revealTimer.current);
-    // The recording's own length plus a short beat to actually see the
-    // landed coin and the reveal line before moving on, not just a one-line
-    // reaction flashing by the instant the sound stops.
-    revealTimer.current = setTimeout(() => setStep("form"), COIN_TOSS_MS + 300);
+  const askAnother = () => {
+    setQuestion(pickQuestion());
+    setStep("ask");
   };
 
-  const letCoinDecide = () => choose(Math.random() < 0.5 ? question.a : question.b, true);
+  const reveal = (nextAnswer) => {
+    setAnswer(nextAnswer);
+    if (nextAnswer.byCoin) {
+      setVerdictLabel(nextAnswer.side === "heads" ? "Heads. The coin chose" : "Tails. The coin chose");
+      setVerdictLine(pick(COIN_LINES));
+    } else {
+      setVerdictLabel("You chose");
+      setVerdictLine(pick(CHOSEN_LINES));
+    }
+    setFormError("");
+    setStep("result");
+  };
 
-  /* ---- the signup form ---- */
-  const [name, setName] = useState("");
+  const choose = (label) => reveal({ pick: label, byCoin: false, side: null });
+
+  const onCoinDecide = () => setStep("toss");
+  const onTossDone = (side) => {
+    reveal({ pick: side === "heads" ? question.a : question.b, byCoin: true, side });
+  };
+
+  /* ---- the sign-up form ---- */
+  const [fname, setFname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [phoneError, setPhoneError] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [done, setDone] = useState(null); // { name, q, a, by }
+  const fnameRef = useRef(null);
 
-  const onPhoneChange = (e) => {
-    setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10));
-    setPhoneError("");
-  };
+  useEffect(() => {
+    if (step !== "result") return;
+    const t = setTimeout(() => {
+      try { fnameRef.current?.focus({ preventScroll: true }); } catch { /* not focusable yet */ }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  const onPhoneChange = (e) => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10));
 
   const onSubmit = async (e) => {
     e.preventDefault();
     if (busy) return;
-    if (phone && !PHONE.test(phone)) {
-      setPhoneError("Enter a 10-digit Indian mobile number.");
-      return;
-    }
-    setSubmitError("");
+    const name = fname.trim();
+    if (!name) return setFormError("Add your first name.");
+    if (!EMAIL.test(email.trim())) return setFormError("Enter an email address like name@example.com.");
+    if (!PHONE.test(phone)) return setFormError("Enter a 10-digit Indian mobile number, without +91.");
+    if (!consent) return setFormError("Tick the WhatsApp consent box so we can send your invite.");
+
+    setFormError("");
     setBusy(true);
     try {
       await api.submitWaitlist({
-        name: name.trim(),
+        name,
         email: email.trim(),
         phone,
-        question: answer?.question || "",
-        answer: answer?.choice || "",
+        question: question.q,
+        answer: answer?.pick || "",
       });
-      try { localStorage.setItem(WAITLIST_KEY, "1"); } catch { /* private window */ }
+      try { storage(WAITLIST_KEY, "1"); } catch { /* private window */ }
+      setDone({
+        name,
+        q: question.q,
+        a: answer?.pick || "",
+        by: answer?.byCoin ? `The coin (${answer.side})` : "You",
+      });
       setAlreadyOnList(true);
+      setStep("done");
     } catch (err) {
-      setSubmitError(err.message || "Something went wrong. Please try again.");
+      setFormError(err.message || "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
   };
 
-  /* ---- the "Enter using password" escape hatch ----
-     A soft speed bump for the team and early press, not a real lock — the
-     same bar onthefence.in's own equivalent sets. The value never leaves this
-     bundle as anything more sensitive than a Razorpay public key ID does; do
-     not raise this to a security boundary without moving the check server-side. */
+  const doneAgain = () => {
+    setDone(null);
+    setFname(""); setEmail(""); setPhone(""); setConsent(false);
+    askAnother();
+  };
+
+  /* ---- the "Enter using password" escape hatch ---- */
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -268,199 +389,248 @@ export default function EarlyAccessGate({ onUnlock }) {
   const onPasswordSubmit = (e) => {
     e.preventDefault();
     if (GATE_PASSWORD && password === GATE_PASSWORD) {
-      try { localStorage.setItem(GATE_KEY, "1"); } catch { /* private window */ }
+      try { storage(GATE_KEY, "1"); } catch { /* private window */ }
       onUnlock();
     } else {
       setPasswordError("That's not it.");
     }
   };
 
-  /* Reduced motion needs nothing special here: Coin.jsx checks it itself for
-     drag/flip, and the passive idle spin is already killed globally by the
-     .coin-spin .coin-inner rule under @media (prefers-reduced-motion: reduce)
-     in index.css. */
-  return (
-    <div className="grid min-h-dvh bg-cream md:grid-cols-2">
-      {/* ---- the left panel: the video loop, alone ----
-          On request: no coin, no ghost letter, no gradient, no slogan here —
-          just whichever of the five clips this visit picked, filling the
-          panel. The coin moves to the content panel instead, where it
-          becomes the spin-to-reveal moment after an answer is picked. */}
-      <div className="relative order-first min-h-[320px] overflow-hidden bg-ink md:min-h-0">
-        <GateVideo />
-      </div>
+  const ink = "#0d0c0a", ink2 = "#16140f", line = "#2c281f", cream = "#efe6d4",
+    muted = "#968c7a", gold = "#d6b066";
 
-      {/* ---- the content panel ---- */}
-      <div className="flex flex-col justify-center px-6 py-16 md:px-14 lg:px-20">
-        <div className="mx-auto w-full max-w-md">
-          {alreadyOnList ? (
-            <>
-              <p className="mb-5 text-[11px] tracking-[0.22em] text-gold-dark uppercase">You're on the list</p>
-              <h1 className="mb-5 font-display text-4xl text-ink md:text-5xl">See you at the gate.</h1>
-              <p className="max-w-prose text-sm leading-relaxed text-brown">
-                We'll be in touch the moment it opens. Until then — the coin keeps spinning.
-              </p>
-            </>
-          ) : step === "reveal" ? (
-            <div className="flex min-h-[320px] flex-col items-center justify-center gap-6 text-center">
-              <div style={{ filter: "drop-shadow(0 20px 36px rgba(21,18,16,.25))" }}>
-                <Coin size="xl" className="coin-toss" />
+  return (
+    <main
+      className="mx-auto flex max-w-[480px] flex-col items-center px-5 pb-10 antialiased"
+      style={{ background: ink, color: cream, fontFamily: "var(--font-mono)", colorScheme: "dark" }}
+    >
+      <Film />
+
+      {/* Brand — overlaps the bottom of the film. The real wordmark treatment
+          stands in for a separate wordmark image; the coin IS the emblem. */}
+      <header className="relative z-[2] -mt-16 flex flex-col items-center gap-3.5">
+        <img
+          src="/assets/coin-front.webp"
+          alt=""
+          width="104" height="104"
+          className="h-[104px] w-[104px] rounded-full"
+          style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,.6))" }}
+        />
+        <span
+          className="metallic-text wordmark text-base tracking-[0.2em]"
+          style={{ fontStretch: "125%" }}
+          aria-label="Normalize"
+        >
+          NORMALIZE
+        </span>
+      </header>
+
+      <section className="mt-[34px] flex w-full flex-col items-center text-center">
+        {alreadyOnList && step !== "done" ? (
+          <>
+            <p className="text-[11px] tracking-[0.28em] uppercase" style={{ color: gold }}>Early access</p>
+            <h1 className="my-3 font-display text-[clamp(34px,9.4vw,44px)] leading-[1.08] italic">
+              See you at the gate.
+            </h1>
+            <p className="max-w-[32ch]" style={{ color: muted }}>
+              We'll message you on WhatsApp before the doors open.
+            </p>
+          </>
+        ) : step === "ask" ? (
+          <>
+            <p className="text-[11px] tracking-[0.28em] uppercase" style={{ color: muted }}>
+              Early access · one question
+            </p>
+            <h1 className="my-3 mb-7 font-display text-[clamp(34px,9.4vw,44px)] leading-[1.08] italic text-balance">
+              {question.q}
+            </h1>
+            <div className="flex w-full flex-col gap-3">
+              <button
+                type="button" onClick={() => choose(question.a)}
+                className="w-full rounded-full border px-[22px] py-[18px] text-[15px] tracking-[0.04em] transition-[transform,border-color] active:scale-[.985]"
+                style={{ background: ink2, color: cream, borderColor: line }}
+              >
+                {question.a}
+              </button>
+              <button
+                type="button" onClick={() => choose(question.b)}
+                className="w-full rounded-full border px-[22px] py-[18px] text-[15px] tracking-[0.04em] transition-[transform,border-color] active:scale-[.985]"
+                style={{ background: ink2, color: cream, borderColor: line }}
+              >
+                {question.b}
+              </button>
+              <button
+                type="button" onClick={onCoinDecide}
+                className="flex w-full items-center justify-center gap-3 rounded-full border px-[22px] py-[18px] text-[15px] tracking-[0.04em] transition-[filter] active:scale-[.985] hover:brightness-[1.06]"
+                style={{
+                  background: "linear-gradient(135deg, #e8cc8a 0%, #d6b066 45%, #9c7430 100%)",
+                  color: "#1b1307", borderColor: "#e6c886",
+                }}
+              >
+                <img src="/assets/coin-front.webp" alt="" width="26" height="26"
+                  className="h-[26px] w-[26px] rounded-full" style={{ boxShadow: "0 1px 3px rgba(0,0,0,.4)" }} />
+                Let the coin decide
+              </button>
+              <div className="mt-0.5 text-[11px] tracking-[0.06em]" style={{ color: muted }}>
+                {question.a === "Heads"
+                  ? "Heads or tails, the coin knows."
+                  : `Heads: ${question.a} · Tails: ${question.b}`}
               </div>
-              <p className="font-display text-2xl text-ink italic md:text-3xl">{revealText}</p>
             </div>
-          ) : step === "question" ? (
-            <>
-              <p className="mb-5 text-[11px] tracking-[0.22em] text-gold-dark uppercase">One question · Edition 001</p>
-              <h1 className="mb-5 font-display text-4xl text-ink md:text-5xl">{question.q}</h1>
-              <p className="mb-8 max-w-prose text-sm leading-relaxed text-brown">
-                We ask one small thing before the gate, never a form up front.
-                Answer honestly, or don't — there's always a third option.
-              </p>
-              <hr className="doc-rule" />
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => choose(question.a)}
-                  className="min-h-12 rounded-full border border-ink bg-ink px-6 py-3.5 text-[12px] tracking-[0.1em]
-                             text-cream uppercase transition-colors hover:border-brown hover:bg-brown"
-                >
-                  {question.a}
-                </button>
-                <button
-                  onClick={() => choose(question.b)}
-                  className="min-h-12 rounded-full border border-ink bg-ink px-6 py-3.5 text-[12px] tracking-[0.1em]
-                             text-cream uppercase transition-colors hover:border-brown hover:bg-brown"
-                >
-                  {question.b}
-                </button>
-                <button
-                  onClick={letCoinDecide}
-                  className="min-h-12 rounded-full border border-gold-dark px-6 py-3.5 text-[12px] tracking-[0.1em]
-                             text-brown uppercase transition-colors hover:bg-gold hover:text-ink"
-                >
-                  Let the coin decide
-                </button>
-              </div>
-              <GateFooter showPassword={showPassword} setShowPassword={setShowPassword}
-                password={password} setPassword={setPassword} passwordError={passwordError}
-                onPasswordSubmit={onPasswordSubmit} hasPassword={Boolean(GATE_PASSWORD)} />
-            </>
-          ) : (
-            <>
-              <p className="mb-5 text-[11px] tracking-[0.22em] text-gold-dark uppercase">Launch · Edition 001</p>
-              <h1 className="mb-5 font-display text-4xl text-ink md:text-5xl">The coin hasn't landed yet.</h1>
-              <p className="mb-6 max-w-prose text-sm leading-relaxed text-brown">
-                One product at a time. The Butterfly Tote is next — indigo jute
-                under a scatter of white butterflies. We open the gate the
-                moment the first run is off the machines in Chennai.
-              </p>
-
-              {answer && (
-                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-line px-3.5 py-2
-                                 text-[11px] tracking-[0.08em] text-brown">
-                  You told us: <b className="font-bold text-ink">{answer.question.replace("?", "")}: {answer.choice}</b>
-                  <button
-                    type="button"
-                    onClick={() => setStep("question")}
-                    className="ml-0.5 underline decoration-gold-dark underline-offset-4"
-                  >
-                    change
-                  </button>
-                </div>
-              )}
-
-              <hr className="doc-rule" />
-
-              <form onSubmit={onSubmit}>
-                <label className="mb-6 block">
-                  <span className="mb-2 block text-[11px] tracking-[0.16em] text-brown uppercase">Full name</span>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                    autoComplete="name" required maxLength={80} className="field" />
-                </label>
-
-                <label className="mb-6 block">
-                  <span className="mb-2 block text-[11px] tracking-[0.16em] text-brown uppercase">Email</span>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email" required inputMode="email" className="field" />
-                </label>
-
-                <label className="mb-6 block">
-                  <span className="mb-2 block text-[11px] tracking-[0.16em] text-brown uppercase">WhatsApp number</span>
-                  <div className="flex items-end gap-2.5">
-                    <span className="border-b border-line pb-2.5 text-sm text-brown">🇮🇳 +91</span>
-                    <input type="text" value={phone} onChange={onPhoneChange}
-                      inputMode="numeric" maxLength={10} placeholder="98765 43210"
-                      autoComplete="tel-national" className="field flex-1" />
-                  </div>
-                  {phoneError && <p className="mt-1.5 text-xs text-brown">{phoneError}</p>}
-                </label>
-
-                {submitError && <p role="alert" className="mb-5 text-sm text-brown">{submitError}</p>}
-
-                <button
-                  type="submit" disabled={busy}
-                  className="min-h-11 w-full border border-gold bg-gold px-9 py-4 text-[11px] tracking-[0.18em]
-                             text-ink uppercase transition-opacity duration-300 ease-(--ease-out) disabled:opacity-50"
-                >
-                  {busy ? "Please wait…" : "Get Early Access"}
-                </button>
-              </form>
-
-              <GateFooter showPassword={showPassword} setShowPassword={setShowPassword}
-                password={password} setPassword={setPassword} passwordError={passwordError}
-                onPasswordSubmit={onPasswordSubmit} hasPassword={Boolean(GATE_PASSWORD)} />
-            </>
-          )}
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* The bottom-of-form password escape hatch, shared by the question and form
-   steps so the one way past the gate is never more than a scroll away. Also
-   carries the Instagram link, which used to live on the video panel — moved
-   here rather than deleted when that panel was cleared down to the clip
-   alone, so the real handle doesn't just vanish along with the decoration. */
-function GateFooter({ showPassword, setShowPassword, password, setPassword, passwordError, onPasswordSubmit, hasPassword }) {
-  return (
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
-      <div>
-        {!hasPassword ? null : showPassword ? (
-          <form onSubmit={onPasswordSubmit} className="flex flex-wrap items-end gap-3">
-            <label className="min-w-[160px] flex-1">
-              <span className="mb-2 block text-[11px] tracking-[0.16em] text-brown uppercase">Password</span>
-              <input
-                type="password" value={password}
-                onChange={(e) => { setPassword(e.target.value); }}
-                autoFocus className="field"
-              />
-            </label>
-            <button type="submit" className="min-h-11 border border-ink px-5 py-2.5 text-[11px] tracking-[0.12em] text-ink uppercase">
-              Enter
+            <button
+              type="button" onClick={askAnother}
+              className="mt-5 px-2 py-1.5 text-[12px] tracking-[0.12em] uppercase underline underline-offset-4 transition-colors"
+              style={{ color: muted }}
+            >
+              Ask me another
             </button>
-          </form>
-        ) : (
-          <button type="button" onClick={() => setShowPassword(true)}
-            className="min-h-11 text-[12px] text-brown underline underline-offset-4">
-            Enter using password
-          </button>
-        )}
-        {passwordError && <p className="mt-2 text-xs text-brown">{passwordError}</p>}
-      </div>
+          </>
+        ) : step === "toss" ? (
+          <CoinToss key={tossKey} questionA={question.a} questionB={question.b} onDone={onTossDone} />
+        ) : step === "result" ? (
+          <>
+            <p className="text-[11px] tracking-[0.28em] uppercase" style={{ color: gold }}>{verdictLabel}</p>
+            <h2 className="my-2.5 font-display text-[clamp(38px,10vw,50px)] leading-[1.05] italic text-balance">
+              {answer?.pick}.
+            </h2>
+            <p className="mb-6.5 max-w-[32ch] text-balance" style={{ color: muted }}>{verdictLine}</p>
 
-      <a
-        href="https://www.instagram.com/thenormalize/"
-        target="_blank"
-        rel="noopener"
-        className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2.5
-                   text-[11px] tracking-[0.14em] text-brown transition-colors hover:border-gold-dark hover:text-ink"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-3.5 w-3.5">
-          <rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.2" cy="6.8" r="1" />
-        </svg>
-        @thenormalize
-      </a>
-    </div>
+            <form onSubmit={onSubmit} noValidate className="flex w-full flex-col gap-2.5 text-left">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] tracking-[0.18em] uppercase" style={{ color: muted }}>First name</span>
+                <input
+                  ref={fnameRef} type="text" value={fname} onChange={(e) => setFname(e.target.value)}
+                  autoComplete="given-name" placeholder="Your first name" required
+                  className="w-full rounded px-4 py-[15px] text-base outline-none"
+                  style={{ background: ink2, color: cream, border: `1px solid ${line}` }}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] tracking-[0.18em] uppercase" style={{ color: muted }}>Email</span>
+                <input
+                  type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email" placeholder="you@example.com" required
+                  className="w-full rounded px-4 py-[15px] text-base outline-none"
+                  style={{ background: ink2, color: cream, border: `1px solid ${line}` }}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] tracking-[0.18em] uppercase" style={{ color: muted }}>WhatsApp number</span>
+                <div className="flex gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="flex flex-none items-center rounded px-3.5 text-[15px] tabular-nums"
+                    style={{ background: ink2, color: cream, border: `1px solid ${line}` }}
+                  >
+                    +91
+                  </span>
+                  <input
+                    type="tel" inputMode="numeric" value={phone} onChange={onPhoneChange}
+                    autoComplete="tel-national" placeholder="10-digit number" maxLength={10} required
+                    className="min-w-0 flex-1 rounded px-4 py-[15px] text-base tabular-nums outline-none"
+                    style={{ background: ink2, color: cream, border: `1px solid ${line}` }}
+                  />
+                </div>
+              </label>
+              <label className="mt-1.5 flex cursor-pointer items-start gap-3 text-[12px] leading-[1.55]" style={{ color: muted }}>
+                <input
+                  type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)}
+                  className="gate-checkbox mt-px h-5 w-5 flex-none appearance-none rounded"
+                  style={{ background: ink2, border: `1px solid ${muted}` }}
+                />
+                <span>
+                  I agree to receive automated WhatsApp messages from Normalize. Consent is not required to buy.
+                  Message and data rates may apply.
+                </span>
+              </label>
+              <div className="min-h-[18px] text-[12px]" style={{ color: "#e59a7e" }} role="alert">{formError}</div>
+              <button
+                type="submit" disabled={busy}
+                className="mt-1 w-full rounded-full border px-[22px] py-[18px] text-[15px] tracking-[0.04em] transition-[filter] disabled:opacity-60"
+                style={{
+                  background: "linear-gradient(135deg, #e8cc8a 0%, #d6b066 45%, #9c7430 100%)",
+                  color: "#1b1307", borderColor: "#e6c886",
+                }}
+              >
+                {busy ? "Please wait…" : "Get early access"}
+              </button>
+              <p className="mt-3 text-center text-[11px] leading-[1.6]" style={{ color: "#6f675a" }}>
+                By signing up you agree to receive automated updates and marketing messages from Normalize on
+                WhatsApp and email. Reply STOP to unsubscribe at any time.
+              </p>
+            </form>
+          </>
+        ) : step === "done" && done ? (
+          <>
+            <div
+              className="flex w-full flex-col items-center gap-3.5 rounded-md px-[22px] pt-[26px] pb-[22px] text-center"
+              style={{ background: ink2, border: `1px solid ${line}` }}
+            >
+              <img src="/assets/coin-front.webp" alt="" width="72" height="72" className="h-[72px] w-[72px] rounded-full" />
+              <h2 className="font-display text-[36px] leading-[1.1] italic text-balance">
+                You're on the list, {done.name}.
+              </h2>
+              <dl
+                className="mt-1.5 grid w-full grid-cols-[auto_1fr] gap-x-4 gap-y-2 pt-4 text-left"
+                style={{ borderTop: `1px dashed ${line}` }}
+              >
+                <dt className="text-[11px] tracking-[0.1em] uppercase" style={{ color: muted }}>Name</dt>
+                <dd>{done.name}</dd>
+                <dt className="text-[11px] tracking-[0.1em] uppercase" style={{ color: muted }}>Question</dt>
+                <dd>{done.q}</dd>
+                <dt className="text-[11px] tracking-[0.1em] uppercase" style={{ color: muted }}>Answer</dt>
+                <dd>{done.a}</dd>
+                <dt className="text-[11px] tracking-[0.1em] uppercase" style={{ color: muted }}>Decided by</dt>
+                <dd>{done.by}</dd>
+              </dl>
+              <p style={{ color: muted }}>We'll message you on WhatsApp before the doors open.</p>
+            </div>
+            <button
+              type="button" onClick={doneAgain}
+              className="mt-5 px-2 py-1.5 text-[12px] tracking-[0.12em] uppercase underline underline-offset-4"
+              style={{ color: muted }}
+            >
+              Ask me another
+            </button>
+          </>
+        ) : null}
+      </section>
+
+      {/* The password escape hatch — a soft speed bump for the team, same bar
+          onthefence.in's own equivalent sets, not a real lock. */}
+      {Boolean(GATE_PASSWORD) && (
+        <div className="mt-8 w-full border-t pt-6" style={{ borderColor: line }}>
+          {showPassword ? (
+            <form onSubmit={onPasswordSubmit} className="flex flex-wrap items-end gap-3">
+              <label className="min-w-[160px] flex-1 text-left">
+                <span className="mb-2 block text-[11px] tracking-[0.16em] uppercase" style={{ color: muted }}>Password</span>
+                <input
+                  type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  autoFocus className="w-full rounded px-4 py-[15px] text-base outline-none"
+                  style={{ background: ink2, color: cream, border: `1px solid ${line}` }}
+                />
+              </label>
+              <button type="submit" className="min-h-11 border px-5 py-2.5 text-[11px] tracking-[0.12em] uppercase"
+                style={{ borderColor: cream, color: cream }}>
+                Enter
+              </button>
+            </form>
+          ) : (
+            <button type="button" onClick={() => setShowPassword(true)}
+              className="min-h-11 text-[12px] underline underline-offset-4" style={{ color: muted }}>
+              Enter using password
+            </button>
+          )}
+          {passwordError && <p className="mt-2 text-xs" style={{ color: "#e59a7e" }}>{passwordError}</p>}
+        </div>
+      )}
+
+      <footer className="mt-6 text-[11px]" style={{ color: muted }}>
+        <a href="https://www.instagram.com/thenormalize/" target="_blank" rel="noopener"
+          className="underline underline-offset-4 hover:text-current">
+          @thenormalize
+        </a>
+      </footer>
+    </main>
   );
 }
