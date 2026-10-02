@@ -600,4 +600,30 @@
   }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bag-catch { animation: none; }
+  .fade-in { animation: none; }
 }
+
+/* ---------- The early-access gate ----------
+   Scoped to this one page: a React `key` on the state wrapper remounts it
+   on every ask/toss/result/done change, which replays this animation from
+   scratch each time without any manual reflow-forcing. */
+@keyframes fadeUp {
+  from { opacity: .001; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.fade-in { animation: fadeUp .45s ease both; }
+
+/* A custom tick drawn with clip-path rather than a background image — one
+   less asset, and it inherits the gate's gold exactly. */
+.gate-checkbox { position: relative; display: grid; place-content: center; }
+.gate-checkbox::after {
+  content: "";
+  width: 10px; height: 10px;
+  background: #d6b066;
+  transform: scale(0);
+  transition: transform .12s ease;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+.gate-checkbox:checked { border-color: #d6b066 !important; }
+.gate-checkbox:checked::after { transform: scale(1); }
+.gate-checkbox:focus-visible { outline: 2px solid #d6b066; outline-offset: 2px; }
