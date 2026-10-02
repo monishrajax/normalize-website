@@ -144,7 +144,7 @@ function Film() {
 
   return (
     <div
-      className="relative mx-[-20px] w-[calc(100%+40px)] overflow-hidden bg-black"
+      className="relative w-full overflow-hidden bg-black"
       style={{ aspectRatio: "4 / 5", maxHeight: "56vh" }}
     >
       <video
@@ -467,12 +467,15 @@ export default function EarlyAccessGate({ onUnlock }) {
 
   return (
     <div className="min-h-dvh w-full" style={{ background: ink, colorScheme: "dark" }}>
+    {/* Full page width — on anything wider than a phone, a 480px reading
+        column with nothing beside it reads as a card abandoned in a dead
+        void. The film spans the whole viewport; only the text and buttons
+        stay narrow, underneath it. */}
+    <Film />
     <main
       className="mx-auto flex max-w-[480px] flex-col items-center px-5 pb-10 antialiased"
       style={{ color: cream, fontFamily: "var(--font-mono)" }}
     >
-      <Film />
-
       {/* Brand — overlaps the bottom of the film. The real wordmark treatment
           stands in for a separate wordmark image; the coin IS the emblem. */}
       <header className="relative z-[2] -mt-16 flex flex-col items-center gap-3.5">
