@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+import Coin from "./Coin";
 
 /* The early-access gate — fronts the entire site while VITE_EARLY_ACCESS is
    "true". Rebuilt against a full, precise spec handed over directly (single
@@ -487,15 +488,11 @@ export default function EarlyAccessGate({ onUnlock }) {
       style={{ color: cream, fontFamily: "var(--font-mono)" }}
     >
       {/* Brand — overlaps the bottom of the film. The real wordmark treatment
-          stands in for a separate wordmark image; the coin IS the emblem. */}
+          stands in for a separate wordmark image; the coin IS the emblem.
+          The same interactive Coin as the hero, not a static image — drag,
+          tap, or arrow keys turn it, same gestures everywhere on the site. */}
       <header className="relative z-[2] -mt-16 flex flex-col items-center gap-3.5 md:mt-0">
-        <img
-          src="/assets/coin-front.webp"
-          alt=""
-          width="104" height="104"
-          className="h-[104px] w-[104px] rounded-full"
-          style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,.6))" }}
-        />
+        <Coin size="lg" interactive className="[filter:drop-shadow(0_6px_18px_rgba(0,0,0,.6))]" />
         <span
           className="metallic-text wordmark text-base tracking-[0.2em]"
           style={{ fontStretch: "125%" }}
