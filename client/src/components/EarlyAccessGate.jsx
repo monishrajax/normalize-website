@@ -400,7 +400,6 @@ export default function EarlyAccessGate({ onUnlock }) {
   const [fname, setFname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [consent, setConsent] = useState(false);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null); // { name, q, a, by }
@@ -423,7 +422,6 @@ export default function EarlyAccessGate({ onUnlock }) {
     if (!name) return setFormError("Add your first name.");
     if (!EMAIL.test(email.trim())) return setFormError("Enter an email address like name@example.com.");
     if (!PHONE.test(phone)) return setFormError("Enter a 10-digit Indian mobile number, without +91.");
-    if (!consent) return setFormError("Tick the WhatsApp consent box so we can send your invite.");
 
     setFormError("");
     setBusy(true);
@@ -453,7 +451,7 @@ export default function EarlyAccessGate({ onUnlock }) {
 
   const doneAgain = () => {
     setDone(null);
-    setFname(""); setEmail(""); setPhone(""); setConsent(false);
+    setFname(""); setEmail(""); setPhone("");
     askAnother();
   };
 
@@ -621,17 +619,6 @@ export default function EarlyAccessGate({ onUnlock }) {
                     style={{ background: ink2, color: cream, border: `1px solid ${line}` }}
                   />
                 </div>
-              </label>
-              <label className="mt-1.5 flex cursor-pointer items-start gap-3 text-[12px] leading-[1.55]" style={{ color: muted }}>
-                <input
-                  type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)}
-                  className="gate-checkbox mt-px h-5 w-5 flex-none appearance-none rounded"
-                  style={{ background: ink2, border: `1px solid ${muted}` }}
-                />
-                <span>
-                  I agree to receive automated WhatsApp messages from Normalize. Consent is not required to buy.
-                  Message and data rates may apply.
-                </span>
               </label>
               <div className="min-h-[18px] text-[12px]" style={{ color: "#e59a7e" }} role="alert">{formError}</div>
               <button
