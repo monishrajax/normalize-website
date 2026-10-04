@@ -205,7 +205,7 @@ function Film() {
    shadow that shrinks and returns in sync. Runs once per mount; the parent
    remounts this (via a key) each time the visitor tosses again.
 --------------------------------------------------------------------------- */
-function CoinToss({ questionA, questionB, onDone, forcedSide }) {
+function CoinToss({ questionA, questionB, onDone }) {
   const coinRef = useRef(null);
   const shadowRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -250,10 +250,7 @@ function CoinToss({ questionA, questionB, onDone, forcedSide }) {
     const shadow = shadowRef.current;
     if (!coin) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // A direct pick still runs the full toss — it just tells the coin
-    // which face to land on, so the animation stays honest about what was
-    // actually chosen instead of landing random and then being overridden.
-    const heads = forcedSide ? forcedSide === "heads" : Math.random() < 0.5;
+    const heads = Math.random() < 0.5;
     const side = heads ? "heads" : "tails";
 
     if (reduced || !coin.animate) {
@@ -371,29 +368,14 @@ export default function EarlyAccessGate({ onUnlock }) {
     setStep("result");
   };
 
-  /* Every path through the gate goes through the same toss — it's the
-     site's one recurring piece of brand theatre, not a mechanic reserved
-     for "let the coin decide". A direct pick just forces which face the
-     coin lands on, via `pending.side`, so the animation still runs in
-     full but settles on the answer the visitor actually chose. */
-  const [pending, setPending] = useState(null); // { byCoin, pick?, side? }
+  /* A direct pick is a decision already made — it goes straight to the
+     result. The toss belongs only to "Let the coin decide". */
+  const choose = (label) => reveal({ pick: label, byCoin: false, side: null });
 
-  const choose = (label) => {
-    setPending({ byCoin: false, pick: label, side: label === question.a ? "heads" : "tails" });
-    setStep("toss");
-  };
-
-  const onCoinDecide = () => {
-    setPending({ byCoin: true });
-    setStep("toss");
-  };
+  const onCoinDecide = () => setStep("toss");
 
   const onTossDone = (side) => {
-    if (pending?.byCoin) {
-      reveal({ pick: side === "heads" ? question.a : question.b, byCoin: true, side });
-    } else {
-      reveal({ pick: pending.pick, byCoin: false, side });
-    }
+    reveal({ pick: side === "heads" ? question.a : question.b, byCoin: true, side });
   };
 
   /* ---- the sign-up form ---- */
@@ -572,7 +554,6 @@ export default function EarlyAccessGate({ onUnlock }) {
             key={tossKey}
             questionA={question.a}
             questionB={question.b}
-            forcedSide={pending?.byCoin ? null : pending?.side}
             onDone={onTossDone}
           />
         ) : step === "result" ? (
