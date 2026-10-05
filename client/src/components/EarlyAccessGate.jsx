@@ -502,7 +502,7 @@ export default function EarlyAccessGate({ onUnlock }) {
           </>
         ) : step === "ask" ? (
           <>
-            <p className="text-[11px] tracking-[0.28em] uppercase" style={{ color: muted }}>
+            <p className="text-[11px] tracking-[0.28em] uppercase" style={{ color: "#d9cfbc" }}>
               Early access · one question
             </p>
             <h1 className="my-3 mb-7 font-display text-[clamp(34px,9.4vw,44px)] leading-[1.08] italic text-balance">
