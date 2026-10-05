@@ -657,9 +657,9 @@ export default function EarlyAccessGate({ onUnlock }) {
       {/* The password escape hatch — a soft speed bump for the team, same bar
           onthefence.in's own equivalent sets, not a real lock. */}
       {Boolean(GATE_PASSWORD) && (
-        <div className="mt-8 w-full border-t pt-6" style={{ borderColor: line }}>
+        <div className="mt-7 flex w-full flex-col items-center border-t pt-3" style={{ borderColor: line }}>
           {showPassword ? (
-            <form onSubmit={onPasswordSubmit} className="flex flex-wrap items-end gap-3">
+            <form onSubmit={onPasswordSubmit} className="flex w-full flex-wrap items-end gap-3">
               <label className="min-w-[160px] flex-1 text-left">
                 <span className="mb-2 block text-[11px] tracking-[0.16em] uppercase" style={{ color: muted }}>Password</span>
                 <input
@@ -675,7 +675,7 @@ export default function EarlyAccessGate({ onUnlock }) {
             </form>
           ) : (
             <button type="button" onClick={() => setShowPassword(true)}
-              className="min-h-11 text-[12px] underline underline-offset-4" style={{ color: muted }}>
+              className="min-h-11 px-2 text-[12px] tracking-[0.12em] uppercase underline underline-offset-4" style={{ color: muted }}>
               Enter using password
             </button>
           )}
@@ -683,10 +683,19 @@ export default function EarlyAccessGate({ onUnlock }) {
         </div>
       )}
 
-      <footer className="mt-6 text-[11px]" style={{ color: muted }}>
-        <a href="https://www.instagram.com/thenormalize/" target="_blank" rel="noopener"
-          className="underline underline-offset-4 hover:text-current">
-          @thenormalize
+      <footer className="mt-4 flex justify-center">
+        <a
+          href="https://www.instagram.com/thenormalize/" target="_blank" rel="noopener noreferrer"
+          aria-label="Normalize on Instagram"
+          className="flex h-11 w-11 items-center justify-center rounded-full border transition-colors hover:border-[#d6b066] hover:text-[#d6b066]"
+          style={{ color: muted, borderColor: line }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="5" />
+            <circle cx="12" cy="12" r="4.2" />
+            <circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+          </svg>
         </a>
       </footer>
     </main>
