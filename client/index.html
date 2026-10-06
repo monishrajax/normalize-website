@@ -23,8 +23,18 @@
      is why the wordmark used to render in Helvetica. font-stretch: 125% in the
      stylesheet is what actually selects Expanded. Archivo is OFL. -->
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62.5..125,400..800&family=Cormorant+Garamond:wght@300;400;500;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* Black from the very first paint, so the coin intro never opens on a flash of
+   the cream page. The failsafe animation hides it after 8s even if no script
+   ever runs; reduced-motion visitors and no-JS never see it at all. */
+#boot-curtain{position:fixed;inset:0;z-index:9999;background:#000;animation:boot-out .01s 8s forwards}
+@keyframes boot-out{to{visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#boot-curtain{display:none}}
+</style>
+<noscript><style>#boot-curtain{display:none}</style></noscript>
 </head>
 <body>
+<div id="boot-curtain"></div>
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
 </body>

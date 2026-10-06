@@ -16,6 +16,7 @@ import CheckoutPanel from "./components/CheckoutPanel";
 import InfoPanel from "./components/InfoPanel";
 import AuthPanel from "./components/AuthPanel";
 import EarlyAccessGate from "./components/EarlyAccessGate";
+import IntroCurtain from "./components/IntroCurtain";
 import Footer from "./components/Footer";
 
 /* The launch canvas pulls in three.js and gsap — by far the heaviest thing on
@@ -36,9 +37,13 @@ const GATE_UNLOCK_KEY = "normalize_gate_unlocked";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <GatedApp />
-    </AuthProvider>
+    <>
+      <AuthProvider>
+        <GatedApp />
+      </AuthProvider>
+      {/* Over everything, from the first frame — the page loads beneath it. */}
+      <IntroCurtain />
+    </>
   );
 }
 
