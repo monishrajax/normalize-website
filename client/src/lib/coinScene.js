@@ -33,7 +33,7 @@ const SHADOW_FLOOR = 0.14;   // at profile — deep shadow, never pure black
 const FLASH_GAIN = 1.45;     // peak overdrive, face-on
 const HOLD_COS = 0.74;       // full brightness down to this |cos|  (~42° off axis)
 const DARK_COS = 0.12;       // at the floor from this |cos| inward (~83°)
-function faceBrightness(rotY) {
+export function faceBrightness(rotY) {
   const c = Math.abs(Math.cos(rotY));
   const t = Math.min(1, Math.max(0, (c - DARK_COS) / (HOLD_COS - DARK_COS)));
   return t * t * (3 - 2 * t);
@@ -51,36 +51,11 @@ const USER_PAUSE_MS = 1600;  // idle sweep stays out of the way this long
    want the lean more pronounced. */
 const TILT_RADIANS = 0.16;
 
-export function createCoinScene(container, { isSmall = false } = {}) {
-  let renderer;
-  try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-  } catch {
-    return null;   // no WebGL — the caller falls back to the CSS coin
-  }
-
-  const canvas = renderer.domElement;
-  /* touch-action: pan-y, NOT none. The coin turns on a horizontal drag, so the
-     browser keeps vertical swipes for scrolling — with `none` the canvas covers
-     the whole pinned stage and a phone user cannot scroll past it. */
-  canvas.style.cssText =
-    "position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab;outline:none;";
-  canvas.tabIndex = 0;
-  canvas.setAttribute("role", "button");
-  canvas.setAttribute(
-    "aria-label",
-    "The Normalize coin. Drag to turn it, or press the left and right arrow keys. Press Enter to flip it over."
-  );
-  container.appendChild(canvas);
-
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.35;
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 40);
-
+/* The coin itself — geometry, metal, artwork, studio environment and lights —
+   with no opinion about how it is framed or driven. The launch stage and the
+   intro both build the same coin from this, so the two can never drift apart
+   in how the gold looks. */
+export function buildCoinRig(renderer, scene, { isSmall = false } = {}) {
   const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
   const hq = (t) => {
     t.anisotropy = MAX_ANISO;
@@ -340,7 +315,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
   coinMesh.rotation.x = Math.PI / 2;   // tip it to face the camera
   pivot.add(coinMesh);
 
-  Promise.all([loadFace(FACE_FRONT), loadFace(FACE_BACK)])
+  const ready = Promise.all([loadFace(FACE_FRONT), loadFace(FACE_BACK)])
     .then(([front, back]) => {
       frontMaterial.map = front.map;
       frontMaterial.bumpMap = front.bump;
@@ -352,6 +327,61 @@ export function createCoinScene(container, { isSmall = false } = {}) {
       backMaterial.needsUpdate = true;
     })
     .catch(() => { /* artwork missing — the coin still renders as blank gold */ });
+
+  /* Face brightness follows the coin's own rotation (see faceBrightness). The
+     glint adds to it; only the two FACE materials are driven, so the milled
+     rim keeps its shine right through a turn. */
+  function setFaceLight(face, glint = 0) {
+    const env = BASE_ENV_FACE * (SHADOW_FLOOR + FLASH_GAIN * face) + glint;
+    frontMaterial.envMapIntensity = env;
+    backMaterial.envMapIntensity = env;
+  }
+
+  return {
+    tiltGroup, pivot, keyLight, setFaceLight, ready,
+    dispose() {
+      envRT.dispose();
+      geometry.dispose();
+      [rimMaterial, frontMaterial, backMaterial].forEach((m) => {
+        m.map?.dispose(); m.bumpMap?.dispose(); m.dispose();
+      });
+      [rimBump, rimRough, grainRough, brushNormal].forEach((t) => t.dispose());
+    },
+  };
+}
+
+export function createCoinScene(container, { isSmall = false } = {}) {
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+  } catch {
+    return null;   // no WebGL — the caller falls back to the CSS coin
+  }
+
+  const canvas = renderer.domElement;
+  /* touch-action: pan-y, NOT none. The coin turns on a horizontal drag, so the
+     browser keeps vertical swipes for scrolling — with `none` the canvas covers
+     the whole pinned stage and a phone user cannot scroll past it. */
+  canvas.style.cssText =
+    "position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab;outline:none;";
+  canvas.tabIndex = 0;
+  canvas.setAttribute("role", "button");
+  canvas.setAttribute(
+    "aria-label",
+    "The Normalize coin. Drag to turn it, or press the left and right arrow keys. Press Enter to flip it over."
+  );
+  container.appendChild(canvas);
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.35;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 40);
+
+  const rig = buildCoinRig(renderer, scene, { isSmall });
+  const { tiltGroup, pivot, keyLight } = rig;
 
   /* ---- State ---- */
   const spin = {
@@ -512,12 +542,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
       }
     }
 
-    /* Only the two FACE materials are driven. The rim is left alone so the
-       milled edge keeps its shine right through the turn — if the rim darkens
-       with the faces the whole effect collapses into a crossfade. */
-    const env = BASE_ENV_FACE * (SHADOW_FLOOR + FLASH_GAIN * face) + glint;
-    frontMaterial.envMapIntensity = env;
-    backMaterial.envMapIntensity = env;
+    rig.setFaceLight(face, glint);
 
     renderer.render(scene, camera);
     frame = requestAnimationFrame(tick);
@@ -538,12 +563,7 @@ export function createCoinScene(container, { isSmall = false } = {}) {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
-      envRT.dispose();
-      geometry.dispose();
-      [rimMaterial, frontMaterial, backMaterial].forEach((m) => {
-        m.map?.dispose(); m.bumpMap?.dispose(); m.dispose();
-      });
-      [rimBump, rimRough, grainRough, brushNormal].forEach((t) => t.dispose());
+      rig.dispose();
       renderer.dispose();
       canvas.remove();
     },
