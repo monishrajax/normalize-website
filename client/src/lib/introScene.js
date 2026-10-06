@@ -29,10 +29,7 @@ const mix = (a, b, k) => a + (b - a) * k;
 const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
 const easeInCubic = (x) => x * x * x;
 const smooth = (x) => x * x * (3 - 2 * x);
-const easeOutBack = (x) => {
-  const c1 = 1.4, c3 = c1 + 1;
-  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
-};
+const easeInOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
 export function createIntroScene(container, { isSmall = false } = {}) {
   let renderer;
@@ -133,9 +130,11 @@ export function createIntroScene(container, { isSmall = false } = {}) {
     camera.position.set(Math.sin(t * 0.9) * 0.045 * d, 0, d);
     camera.lookAt(0, 0, 0);
 
-    /* The drop: from near the top of the frame, falling to centre with a soft
-       overshoot, in screen terms so it reads the same at every depth. */
-    const drop = 0.92 * (1 - easeOutBack(clamp01(t / 1.9)));
+    /* The drop: from near the top of the frame, gathering speed and then
+       cushioning into centre — slow enough at the start that the fall is
+       actually seen while the coin is still coming up out of the dark. In
+       screen terms, so it reads the same at every depth. */
+    const drop = 0.92 * (1 - easeInOutCubic(clamp01(t / 2.2)));
     tiltGroup.position.y = (drop + 0.012 * Math.sin(t * 2.4)) * TAN_HALF_FOV * d;
 
     /* Begins on its BACK and turns 3.5 times to land front-on — the flip is
