@@ -15,10 +15,10 @@ import { buildCoinRig, faceBrightness } from "./coinScene";
    The coin stays on the Y axis: rotation.z is never touched, and the small
    tumble at the start is on the parallax node, not the flip pivot. */
 
-export const INTRO_SECONDS = 4.6;
+export const INTRO_SECONDS = 4.8;
 const T_APPROACH = 2.4;    // arrives from the deep, easing to a stop
-const T_PUSH = 3.1;        // starts coming at the screen
-const T_FADE = 3.95;       // the overlay begins to give way to the page
+const T_PUSH = 3.0;        // starts coming at the screen
+const T_FADE = 4.1;        // the overlay begins to give way to the page
 const T_SPIN = 4.1;        // the turn finishes face-on, front side to us
 const SKIP_SECONDS = 0.35;
 
