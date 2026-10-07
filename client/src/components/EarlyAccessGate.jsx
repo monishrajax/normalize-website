@@ -379,18 +379,18 @@ export default function EarlyAccessGate({ onUnlock }) {
   };
 
   /* ---- the sign-up form ---- */
-  const [fname, setFname] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null); // { name, q, a, by }
-  const fnameRef = useRef(null);
+  const nameRef = useRef(null);
 
   useEffect(() => {
     if (step !== "result") return;
     const t = setTimeout(() => {
-      try { fnameRef.current?.focus({ preventScroll: true }); } catch { /* not focusable yet */ }
+      try { nameRef.current?.focus({ preventScroll: true }); } catch { /* not focusable yet */ }
     }, 350);
     return () => clearTimeout(t);
   }, [step]);
@@ -400,8 +400,8 @@ export default function EarlyAccessGate({ onUnlock }) {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (busy) return;
-    const name = fname.trim();
-    if (!name) return setFormError("Add your first name.");
+    const name = fullName.trim();
+    if (!name) return setFormError("Add your full name.");
     if (!EMAIL.test(email.trim())) return setFormError("Enter an email address like name@example.com.");
     if (!PHONE.test(phone)) return setFormError("Enter a 10-digit Indian mobile number, without +91.");
 
@@ -433,7 +433,7 @@ export default function EarlyAccessGate({ onUnlock }) {
 
   const doneAgain = () => {
     setDone(null);
-    setFname(""); setEmail(""); setPhone("");
+    setFullName(""); setEmail(""); setPhone("");
     askAnother();
   };
 
@@ -566,10 +566,10 @@ export default function EarlyAccessGate({ onUnlock }) {
 
             <form onSubmit={onSubmit} noValidate className="flex w-full flex-col gap-2.5 text-left">
               <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] tracking-[0.18em] uppercase" style={{ color: muted }}>First name</span>
+                <span className="text-[11px] tracking-[0.18em] uppercase" style={{ color: muted }}>Full name</span>
                 <input
-                  ref={fnameRef} type="text" value={fname} onChange={(e) => setFname(e.target.value)}
-                  autoComplete="given-name" placeholder="Your first name" required
+                  ref={nameRef} type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                  autoComplete="name" placeholder="Your full name" required
                   className="w-full rounded px-4 py-[15px] text-base outline-none"
                   style={{ background: ink2, color: cream, border: `1px solid ${line}` }}
                 />
