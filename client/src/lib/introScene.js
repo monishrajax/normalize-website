@@ -34,11 +34,14 @@ const easeInOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2
 export function createIntroScene(container, { isSmall = false } = {}) {
   let renderer;
   try {
+    /* "default", not "high-performance": on a dual-GPU laptop the latter
+       wakes the discrete card for a five-second shot, and phones ignore it. */
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
   } catch {
     return null;   // no WebGL — the caller just shows the page
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2));
+  let ratio = Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2);
+  renderer.setPixelRatio(ratio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.35;
@@ -64,7 +67,15 @@ export function createIntroScene(container, { isSmall = false } = {}) {
   scene.fog = new THREE.Fog(0x000000, 1, 2);   // distances set per frame from the framing
   const camera = new THREE.PerspectiveCamera(34, 1, 0.05, 400);
 
-  const rig = buildCoinRig(renderer, scene, { isSmall });
+  /* Sized to what the shot can actually show. The artwork is 1024px, and on a
+     phone the coin never gets bigger than the screen while it is still
+     visible — so 1024 is 1:1 there. Desktop gets 2048 for headroom. The launch
+     stage still builds its own larger ones; this is only the intro's. */
+  const rig = buildCoinRig(renderer, scene, {
+    isSmall,
+    facePx: isSmall ? 1024 : 2048,
+    maxAnisotropy: 4,
+  });
   const { tiltGroup, pivot, keyLight } = rig;
 
   /* Gold dust the camera flies through. Parallax is what makes the approach
@@ -179,16 +190,60 @@ export function createIntroScene(container, { isSmall = false } = {}) {
   let raf = 0;
   let playing = false;
   let skipAt = null;
+
+  /* Two guards so a weak or high-refresh device is never asked to do more
+     than the shot needs. Neither changes anything on a device that is coping:
+       · refresh cap — on a 100Hz+ screen, draw every other frame. A 120Hz
+         phone would otherwise render the full-screen physical coin twice as
+         often for no visible gain over 60.
+       · resolution — if frames keep arriving late, step the pixel ratio down
+         (at most twice, never below 0.75) instead of stuttering at full size. */
+  const MIN_RATIO = 0.75;
+  const SLOW_GAP_MS = 26;       // ~38fps
+  const WARMUP_FRAMES = 6;      // first draws pay for uploads — don't judge them
+
   function play(onDone) {
     playing = true;
     let t0 = null;
+    let prev = 0, lastDrawn = 0, drawn = 0, tick = 0;
+    let gapMin = Infinity, gaps = 0, every = 1;
+    let slow = 0, scaled = 0;
+
     const loop = (now) => {
       if (!playing) return;
       if (t0 === null) t0 = now;
+
+      if (prev && gaps < 8) {
+        gapMin = Math.min(gapMin, now - prev);
+        if (++gaps === 8 && gapMin < 10) every = 2;
+      }
+      prev = now;
+      tick++;
+
       const t = Math.min(INTRO_SECONDS, (now - t0) / 1000);
       const fade = skipAt === null ? 1 : 1 - clamp01((now - skipAt) / (SKIP_SECONDS * 1000));
+      const last = t >= INTRO_SECONDS || fade <= 0;
+
+      if (!last && every === 2 && (tick & 1) === 0) {
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+
+      if (lastDrawn && ++drawn > WARMUP_FRAMES) {
+        const gap = now - lastDrawn;
+        if (gap > SLOW_GAP_MS && gap < 400) slow++; else if (slow) slow--;
+        if (slow >= 6 && scaled < 2 && ratio > MIN_RATIO) {
+          ratio = Math.max(MIN_RATIO, ratio * 0.75);
+          renderer.setPixelRatio(ratio);
+          renderer.setSize(width, height, false);
+          scaled++;
+          slow = 0;
+        }
+      }
+      lastDrawn = now;
+
       update(t, fade);
-      if (t >= INTRO_SECONDS || fade <= 0) { playing = false; onDone?.(); return; }
+      if (last) { playing = false; onDone?.(); return; }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);

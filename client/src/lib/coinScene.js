@@ -55,8 +55,8 @@ const TILT_RADIANS = 0.16;
    with no opinion about how it is framed or driven. The launch stage and the
    intro both build the same coin from this, so the two can never drift apart
    in how the gold looks. */
-export function buildCoinRig(renderer, scene, { isSmall = false } = {}) {
-  const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
+export function buildCoinRig(renderer, scene, { isSmall = false, facePx, maxAnisotropy } = {}) {
+  const MAX_ANISO = Math.min(renderer.capabilities.getMaxAnisotropy(), maxAnisotropy ?? Infinity);
   const hq = (t) => {
     t.anisotropy = MAX_ANISO;
     t.minFilter = THREE.LinearMipmapLinearFilter;
@@ -216,7 +216,11 @@ export function buildCoinRig(renderer, scene, { isSmall = false } = {}) {
   /* ---- Face artwork ----
      Composited onto solid metal so the caps read as gold even where the
      artwork is transparent. */
-  const FACE_PX = isSmall ? 2048 : 4096;
+  /* The artwork files are 1024px, so anything above that is the same pixels
+     resampled — the launch stage keeps its large canvas for the smooth
+     magnification it wants at macro range; a caller that never magnifies
+     (the intro) can ask for less and skip the cost. */
+  const FACE_PX = facePx ?? (isSmall ? 2048 : 4096);
   function loadFace(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
