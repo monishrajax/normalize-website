@@ -472,7 +472,7 @@ export default function EarlyAccessGate({ onUnlock }) {
           The same interactive Coin as the hero, not a static image — drag,
           tap, or arrow keys turn it, same gestures everywhere on the site. */}
       <header className="relative z-[2] -mt-16 flex flex-col items-center gap-3.5 md:mt-0">
-        <Coin size="lg" interactive className="[filter:drop-shadow(0_6px_18px_rgba(0,0,0,.6))]" />
+        <Coin size="gate" interactive className="[filter:drop-shadow(0_6px_18px_rgba(0,0,0,.6))]" />
         <span
           className="metallic-text wordmark text-base tracking-[0.2em]"
           style={{ fontStretch: "125%" }}
