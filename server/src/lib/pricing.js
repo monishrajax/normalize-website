@@ -35,7 +35,7 @@ export async function priceCart(items, promoCode) {
 
     return {
       product,
-      productId: product._id,
+      productId: product.id,
       name: product.name,
       sku: product.sku,
       price: product.price,
