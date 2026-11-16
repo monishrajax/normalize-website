@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { useCatalogue } from "./hooks/useProducts";
@@ -18,13 +18,6 @@ import AuthPanel from "./components/AuthPanel";
 import EarlyAccessGate from "./components/EarlyAccessGate";
 import IntroCurtain from "./components/IntroCurtain";
 import Footer from "./components/Footer";
-
-/* The launch canvas pulls in three.js and gsap — by far the heaviest thing on
-   the page. Loading it lazily keeps that weight out of the initial bundle. */
-const LaunchCanvas = lazy(() => import("./components/LaunchCanvas"));
-
-/* Reading pages the coin's branches can open directly. */
-const INFO_SECTIONS = new Set(["shipping", "sizeguide", "contact", "track", "story", "craft", "careers"]);
 
 /* Off unless explicitly turned on — this fronts the ENTIRE site, including
    checkout, so it must never flip on by a default. Set VITE_EARLY_ACCESS=true
@@ -77,14 +70,6 @@ function GatedApp() {
   const launchMode = sellable.length === 1;
   const launchProduct = launchMode ? sellable[0] : null;
 
-  /* The coin's three branches. "The Launch" scrolls the page; the other two
-     teleport to their own canvas. */
-  const navigateFromCoin = (target) => {
-    if (target === "cart") return setPanel("cart");
-    if (INFO_SECTIONS.has(target)) return setInfoSection(target);
-    document.getElementById(target)?.scrollIntoView({ behavior: "smooth" });
-  };
-
   /* While Supabase is still reading back a stored session, render nothing
      rather than flashing the gate at a customer who is about to turn out to
      be signed in. Guest visitors (accounts not configured, or genuinely
@@ -106,14 +91,11 @@ function GatedApp() {
         onOpenAccount={() => setPanel("account")}
       />
 
+      {/* The page opens straight on the shop. The pinned coin stage
+          (components/LaunchCanvas.jsx) is no longer mounted here — it is kept
+          in the repo, so putting it back is rendering it as the first child
+          of <main>, with its onNavigate wired to the coin's three branches. */}
       <main id="top">
-        {/* Nothing below the canvas depends on it, so a failure to load
-            three.js degrades to a site without the intro rather than a
-            blank page. */}
-        <Suspense fallback={null}>
-          <LaunchCanvas onNavigate={navigateFromCoin} />
-        </Suspense>
-
         <Hero />
 
         {/* During launch the spotlight IS the product page. The grid is not on

@@ -342,6 +342,17 @@ Shimmering every surface is what made an earlier version read as cheap.
 
 The product grid exists but is hidden while launch mode is on.
 
+**Current state: item 1 is not mounted.** On request, `App.jsx` no longer renders
+`LaunchCanvas`, so the page opens straight on the hero, then the product. The
+component, `lib/coinScene.js` and `data/hotspots.js` are kept untouched — the
+intro (`lib/introScene.js`) builds its coin from `coinScene.js`'s `buildCoinRig`,
+so that file is live either way. To bring the stage back, render
+`<LaunchCanvas onNavigate={...} />` as the first child of `<main id="top">`
+(lazy-imported, inside `<Suspense>`), with `onNavigate` sending `cart` to the bag
+panel, the reading-page ids to `InfoPanel`, and anything else to `scrollIntoView`.
+Until then, the sections below that describe the launch stage, its branches and
+the header dock are a description of code that is present but not running.
+
 ## The coin
 
 A genuine Three.js render, not a CSS approximation. Milled cylinder,
