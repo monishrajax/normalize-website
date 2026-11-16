@@ -31,25 +31,19 @@ function Hook() {
 
 function ShoulderHanger() {
   return (
-    <g>
-      <path
-        d="M62 26 L8 47 Q4 49.5 8 51 L116 51 Q120 49.5 116 47 Z"
-        fill={WOOD} stroke="rgba(0,0,0,.45)" strokeWidth=".7"
-      />
-      <Hook />
-    </g>
+    <path
+      d="M62 26 L8 47 Q4 49.5 8 51 L116 51 Q120 49.5 116 47 Z"
+      fill={WOOD} stroke="rgba(0,0,0,.45)" strokeWidth=".7"
+    />
   );
 }
 
 function ClipHanger({ a, b }) {
   return (
-    <g>
-      <rect
-        x={a - 8} y="25" width={b - a + 16} height="3.4" rx="1.7"
-        fill={WOOD} stroke="rgba(0,0,0,.45)" strokeWidth=".7"
-      />
-      <Hook />
-    </g>
+    <rect
+      x={a - 8} y="25" width={b - a + 16} height="3.4" rx="1.7"
+      fill={WOOD} stroke="rgba(0,0,0,.45)" strokeWidth=".7"
+    />
   );
 }
 
@@ -256,7 +250,7 @@ const DRAW = {
     </>
   ),
 
-  socks: (id) => <Socks id={id} c1="#ece4d2" c2="#b4553a" />,
+  socks: (id) => <Socks id={id} c1="#ece4d2" c2="#b4553a" squash={1.3} />,
 
   /* ---------- women ---------- */
   skirt: (id) => {
@@ -377,8 +371,12 @@ const DRAW = {
     </>
   ),
 
-  wsocks: (id) => <Socks id={id} c1="#f4eee4" c2="#c88f95" squash={0.74} />,
+  wsocks: (id) => <Socks id={id} c1="#f4eee4" c2="#c88f95" squash={0.98} />,
 };
+
+/* Drawn a little larger where the piece is short, so a pair of shorts is as
+   easy to read as a dress. Limited by the 124-unit width of the cell. */
+const SIZE = { shorts: 1.28, wshorts: 1.28, tee: 1.04, wtee: 1.1, tank: 1.08, wtank: 1.14, skirt: 1.02 };
 
 export const GARMENT_KINDS = Object.keys(DRAW);
 
@@ -400,7 +398,8 @@ export default function Garment({ kind }) {
         </linearGradient>
       </defs>
       <rect x="0" y="2.5" width="124" height="9" fill={`url(#${id}-rod)`} />
-      {draw(id)}
+      <Hook />
+      <g transform={`translate(62 26) scale(${SIZE[kind] || 1}) translate(-62 -26)`}>{draw(id)}</g>
     </svg>
   );
 }

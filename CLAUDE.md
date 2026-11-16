@@ -345,9 +345,11 @@ Shimmering every surface is what made an earlier version read as cheap.
 ## Structure, in scroll order
 
 1. **Hero** — eyebrow, serif headline, one line of positioning, one gold button
-2. **The catalogue** — every product, with category and sort controls (`Catalogue`,
+2. **The showroom** — a red curtain that opens as you scroll, a man and a woman
+   standing behind it, and a wardrobe for each (`Showroom`; see below)
+3. **The catalogue** — every product, with category and sort controls (`Catalogue`,
    also what the PRODUCTS canvas shows)
-3. **Footer**
+4. **Footer**
 
 **Removed on request (Nov 2026).** Gone from the client: the launch canvas (the pinned
 WebGL coin stage and its three branches), the dark single-product Spotlight with its
@@ -361,6 +363,59 @@ Deliberately left in place: the server's `POST /api/waitlist`, `models/Waitlist.
 and `sql/003_waitlist.sql` — nothing in the client calls them now, but the signups and
 the table are real data. The opening coin intro (`IntroCurtain` / `lib/introScene.js`)
 also stays.
+
+## The showroom
+
+Added Nov 2026, between the hero and the catalogue. Scroll and a red velvet curtain
+draws back to show a man and a woman standing on a lit stage; click one and a wardrobe
+opens (two swinging doors) with that person's clothes hung along one brass rod, each
+named underneath. Men: shirt, t-shirt, shorts, pants, sweater, sleeveless, socks.
+Women: skirt, dress, blouse, t-shirt, shorts, trousers, cardigan, sleeveless, socks.
+
+| Piece | Where |
+|---|---|
+| The section, scroll maths, open/close and focus handling | `components/Showroom.jsx` |
+| The cabinet, doors, rod and the sliding rail | `components/Wardrobe.jsx` |
+| The sixteen garment drawings (inline SVG) | `components/Garments.jsx` |
+| The two standing figures (inline SVG) | `components/Figures.jsx` |
+| Which garments hang in which wardrobe, and their captions | `data/wardrobes.js` |
+| All of the visuals (curtain, stage, cabinet, doors) | `.sr-*` and `.wd-*` in `styles/index.css` |
+
+How it works, and what is easy to break:
+
+1. **No scroll library.** The section is tall and the stage inside it is `position:
+   sticky`, so the page holds still on the stage while scrolling. The scroll position
+   is turned into two numbers, `--open` (curtain) and `--lights`, written onto the
+   section element; the CSS derives every transform from them. One scroll frame is
+   one style write, so nothing re-renders (React only hears when the curtain is open
+   far enough for the figures to take clicks). Measured: ~0.3ms per frame.
+2. **The stage pins under the sticky header**, so the header's height is measured
+   at run time and written to `--header-h`. Do not hardcode it.
+3. **The curtain gathers by scaling in X from its outer edge**, which is what makes
+   the folds bunch up. It is not a translate.
+4. **The garments are illustrations of kinds of clothing, not products.** They carry
+   no price, link nowhere, and several (t-shirt, shorts, socks) are not in the
+   catalogue. The same goes for the figures: they are faceless stand-ins drawn in SVG
+   because there is no model photography. Replace `<Man />` / `<Woman />` in
+   `Showroom.jsx` with `<img>` tags to use photos; nothing else depends on how they
+   are drawn. To make a garment open a real product, add its slug in
+   `data/wardrobes.js` and handle the click in `Wardrobe.jsx`.
+5. **Narrow screens scroll the rod sideways** (swipe, or the arrows) rather than
+   shrinking the clothes until they cannot be told apart; item width is derived from
+   the cabinet width and the stage height in `.wd`'s `--item-w`.
+6. **Reduced motion**: the section sets `data-reduced`, which unpins it and draws the
+   curtains already open; the doors, fades and swing are switched off in the
+   `prefers-reduced-motion` block. The structural rules deliberately hang off
+   `data-reduced`, not the media query, so the script and the stylesheet cannot
+   disagree.
+7. Opening focuses Back; Escape or Back closes it and returns focus to the figure that
+   opened it. The figures are `disabled` until the curtain is open, so they cannot be
+   clicked or tabbed to through the closed curtain.
+
+Each Tailwind-scanned class used only in a new component is picked up by the
+production build; the dev server's scan can miss a brand-new utility until the CSS is
+next touched, which is why the stage heading is styled in `.sr-heading` rather than
+with arbitrary-colour utilities.
 
 ## The coin
 

@@ -13,7 +13,8 @@ import { useId } from "react";
 
 const SKIN = "#b9835b";
 const SKIN_SHADE = "#9c6c47";
-const HAIR = "#1d1612";
+const HAIR = "#2c1f17";
+const HAIR_LIGHT = "#5b4332";
 const SHOE = "#2a201a";
 const GOLD = "#d4af37";
 
@@ -56,6 +57,7 @@ export function Man({ className = "" }) {
         d="M88 50 C83 24 97 14 111 14 C127 14 137 28 132 50 C131 40 126 32 118 30 C108 28 95 30 90 40 Z"
         fill={HAIR}
       />
+      <path d="M96 33 C102 24 120 23 127 34" fill="none" stroke={HAIR_LIGHT} strokeWidth="1.6" strokeLinecap="round" opacity=".7" />
 
       {/* trousers and shoes */}
       <path d="M78 500 L108 500 L109 514 Q110 527 96 528 L70 528 Q60 528 64 519 Q70 513 78 500 Z" fill={SHOE} />
@@ -100,8 +102,8 @@ export function Man({ className = "" }) {
 export function Woman({ className = "" }) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, "");
   const dress =
-    "M96 90 Q110 112 124 90 L148 102 C142 114 140 126 140 136 L136 238 C140 290 162 360 176 412 Q110 428 44 412 C58 360 80 290 84 238 L80 136 C80 126 78 114 72 102 Z";
-  const arm = "M68 108 C60 114 58 146 56 184 L52 262 C51 274 52 286 57 292 C63 294 66 282 66 268 L70 192 C72 164 74 136 78 124 Z";
+    "M96 90 Q110 112 124 90 L148 102 C142 114 140 126 140 138 C140 172 130 202 132 238 C134 290 160 360 176 412 Q110 428 44 412 C60 360 86 290 88 238 C90 202 80 172 80 138 C80 126 78 114 72 102 Z";
+  const arm = "M86 98 C70 100 62 110 59 142 C57 170 56 190 55 214 L52 262 C51 274 52 286 57 292 C63 294 66 282 66 268 L70 192 C72 168 76 152 82 142 L90 104 Z";
   const leg = "M91 408 L109 408 C109 440 107 470 105 504 L95 504 C93 470 92 440 91 408 Z";
   const heel = (
     <g>
@@ -116,13 +118,15 @@ export function Woman({ className = "" }) {
       <ellipse cx="110" cy="531" rx="66" ry="7" fill={`url(#${id}-floor)`} />
 
       {/* hair behind, neck, head, hair in front */}
-      <path d="M88 52 C82 16 138 16 132 52 C136 86 140 128 128 172 L92 172 C80 128 84 86 88 52 Z" fill="#1b130f" />
+      <path d="M88 52 C82 16 138 16 132 52 C135 76 137 98 133 118 Q110 128 87 118 C83 98 85 76 88 52 Z" fill="#2c1f17" />
       <path d="M102 76 L102 98 Q110 104 118 98 L118 76 Z" fill="#a37250" />
       <ellipse cx="110" cy="52" rx="19" ry="26" fill="#c08b62" />
       <path
         d="M89 50 C86 24 100 14 111 14 C124 14 134 24 131 50 C129 40 123 31 112 29 C102 28 93 36 89 50 Z"
-        fill="#1b130f"
+        fill="#2c1f17"
       />
+      <path d="M97 31 C103 22 121 22 128 33" fill="none" stroke="#5b4332" strokeWidth="1.6" strokeLinecap="round" opacity=".7" />
+      <path d="M91 70 C88 88 89 104 93 116 M129 70 C132 88 131 104 127 116" fill="none" stroke="#4a3527" strokeWidth="1.4" strokeLinecap="round" opacity=".55" />
 
       {/* legs and heels */}
       <path d={leg} fill="#c08b62" />
@@ -130,17 +134,18 @@ export function Woman({ className = "" }) {
       {heel}
       <g transform="translate(220 0) scale(-1 1)">{heel}</g>
 
+      {/* arms, tucked under the dress */}
+      <path d={arm} fill="#c08b62" />
+      <g transform="translate(220 0) scale(-1 1)"><path d={arm} fill="#c08b62" /></g>
+
       {/* dress */}
       <path d={dress} fill="#b08d57" />
       <path d={dress} fill={`url(#${id}-lit)`} />
       <path d="M96 90 Q110 112 124 90" fill="none" stroke="#8f6f3f" strokeWidth="2.6" strokeLinecap="round" />
       <path d="M96 248 Q84 330 62 418 M110 248 L110 426 M124 248 Q136 330 158 418" fill="none" stroke="rgba(0,0,0,.16)" strokeWidth="2" />
       <path d="M103 248 Q96 330 86 420 M117 248 Q124 330 134 420" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="1.4" />
-      <path d="M83.6 232 H136.4 V244 H83.6 Z" fill={GOLD} stroke="rgba(0,0,0,.25)" strokeWidth=".6" />
+      <path d="M87.6 232 H132.4 V244 H87.6 Z" fill={GOLD} stroke="rgba(0,0,0,.25)" strokeWidth=".6" />
 
-      {/* arms */}
-      <path d={arm} fill="#c08b62" />
-      <g transform="translate(220 0) scale(-1 1)"><path d={arm} fill="#c08b62" /></g>
     </svg>
   );
 }

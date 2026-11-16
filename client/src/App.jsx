@@ -6,6 +6,7 @@ import { useCatalogue } from "./hooks/useProducts";
 import AnnounceBar from "./components/AnnounceBar";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
+import Showroom from "./components/Showroom";
 import Catalogue from "./components/Catalogue";
 import ProductsPanel from "./components/ProductsPanel";
 import SearchPanel from "./components/SearchPanel";
@@ -60,12 +61,16 @@ function Storefront() {
       <main id="top">
         <Hero />
 
+        {/* The red curtain that opens as you scroll, and the two wardrobes
+            behind it. Between the hero and the catalogue. */}
+        <Showroom />
+
         {/* The whole catalogue, on the home page. Filter and sort state live
             here and are shared with the PRODUCTS canvas, so the two always
             show the same list. */}
         <section
           id="shop"
-          className="relative mx-auto max-w-(--container-site) scroll-mt-20 px-6 pb-24 md:scroll-mt-24 md:px-8 md:pb-32"
+          className="relative mx-auto max-w-(--container-site) px-6 pt-24 pb-24 md:px-8 md:pt-28 md:pb-32"
         >
           <p className="mb-8 text-[11px] tracking-[0.2em] text-muted uppercase">The catalogue</p>
           <Catalogue

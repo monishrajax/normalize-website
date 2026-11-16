@@ -305,6 +305,385 @@
     object-fit: cover;
     border-radius: 1px;
   }
+
+  /* ---------- The showroom ----------
+     A red curtain that draws back as you scroll, then two figures standing on
+     a lit stage; choose one and a wardrobe opens. (components/Showroom.jsx)
+
+     The section is tall and the stage inside it is `sticky`, so the page holds
+     still on the stage while the scroll position drives two numbers, written
+     onto the section by script: --open (how far the curtains have drawn back,
+     0..1) and --lights (how bright the stage is, 0..1). Everything below is
+     derived from those in CSS, so one scroll frame is one style write — no
+     React re-render. */
+  .sr {
+    position: relative;
+    --stage-h: calc(100vh - var(--header-h, 60px));
+    --curtain: #7b1220;
+    --curtain-deep: #3f0912;
+  }
+  @supports (height: 100dvh) {
+    .sr { --stage-h: calc(100dvh - var(--header-h, 60px)); }
+  }
+
+  .sr-stage {
+    position: sticky;
+    top: var(--header-h, 60px);
+    height: var(--stage-h);
+    overflow: hidden;
+    isolation: isolate;
+    background: #0b0806;
+  }
+
+  /* The room behind the curtain: a warm wall that falls to black, and a floor. */
+  .sr-scene {
+    position: absolute; inset: 0; z-index: 0;
+    transform: scale(calc(1.07 - var(--open, 0) * .07));
+    background:
+      radial-gradient(58% 72% at 50% 36%, rgba(150, 98, 52, calc(.40 * var(--lights, 0))) 0%, rgba(150, 98, 52, 0) 72%),
+      radial-gradient(120% 100% at 50% 0%, #2b1d14 0%, #150f0b 56%, #0a0706 100%);
+  }
+  .sr-floor {
+    position: absolute; left: 0; right: 0; bottom: 0; height: max(104px, 19%);
+    background: linear-gradient(180deg, #1c130d 0%, #0a0706 100%);
+    border-top: 1px solid rgba(212, 175, 55, .26);
+  }
+  .sr-spot {
+    position: absolute; top: 0; bottom: 0; width: 50%;
+    opacity: var(--lights, 0);
+    background: radial-gradient(ellipse 52% 78% at 50% 42%, rgba(255, 214, 150, .20), rgba(255, 214, 150, 0) 72%);
+  }
+  .sr-spot-l { left: 4%; }
+  .sr-spot-r { right: 4%; }
+
+  .sr-title {
+    position: absolute; top: 72px; left: 0; right: 0; z-index: 2;
+    text-align: center; pointer-events: none;
+    opacity: var(--lights, 0);
+    transition: opacity .5s var(--ease-out);
+  }
+  .sr-title[data-hidden="1"] { opacity: 0; }
+  .sr-eyebrow {
+    margin: 0 0 8px;
+    font-size: 11px; letter-spacing: .3em; text-indent: .3em; text-transform: uppercase;
+    color: rgba(246, 230, 168, .82);
+  }
+  .sr-heading {
+    margin: 0;
+    font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(30px, 4.2vw, 52px); line-height: 1.1;
+    color: #f6e9c0;
+  }
+
+  /* Reduced motion: the script sets data-reduced, the final --open and --lights.
+     No pinning, no scroll cue, the curtains already drawn back. */
+  .sr[data-reduced] .sr-stage { position: relative; }
+  .sr[data-reduced] .sr-cue { display: none; }
+  .sr[data-reduced] .sr-scene { transform: none; }
+
+  /* The two figures. */
+  .sr-lineup {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; justify-content: center; align-items: flex-end;
+    gap: clamp(10px, 6vw, 150px);
+    padding-bottom: 16px;
+    opacity: calc(.001 + var(--lights, 0));
+    transition: opacity .55s var(--ease-out), transform .55s var(--ease-out), visibility 0s;
+  }
+  .sr-lineup[data-hidden="1"] {
+    opacity: 0; transform: scale(.96); visibility: hidden;
+    transition: opacity .45s var(--ease-out), transform .45s var(--ease-out), visibility 0s .45s;
+  }
+  .sr-figure {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 clamp(2px, 1.6vw, 30px);
+    background: none; border: 0; color: #e9dfc8;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .5s var(--ease-out);
+  }
+  .sr-figure:disabled { cursor: default; }
+  .sr-art {
+    aspect-ratio: 220 / 540;
+    height: min(calc(var(--stage-h) * .6), calc(37vw * 540 / 220));
+  }
+  .sr-art svg {
+    height: 100%; width: auto; display: block;
+    filter: drop-shadow(0 20px 22px rgba(0, 0, 0, .55));
+    transition: filter .5s var(--ease-out);
+  }
+  .sr-figure:not(:disabled):hover { transform: translateY(-6px); }
+  .sr-figure:not(:disabled):hover .sr-art svg,
+  .sr-figure:focus-visible .sr-art svg {
+    filter: drop-shadow(0 0 26px rgba(212, 175, 55, .34)) drop-shadow(0 20px 22px rgba(0, 0, 0, .55));
+  }
+  .sr-figure-label {
+    margin-top: 14px;
+    font-size: 13px; letter-spacing: .34em; text-transform: uppercase; text-indent: .34em;
+    color: var(--color-gold-light);
+  }
+  .sr-figure-hint {
+    margin-top: 6px;
+    font-size: 10px; letter-spacing: .2em; text-transform: uppercase; text-indent: .2em;
+    color: rgba(233, 223, 200, .58);
+    transition: color .4s var(--ease-out);
+  }
+  .sr-figure:not(:disabled):hover .sr-figure-hint { color: var(--color-gold-light); }
+  @media (max-width: 480px) {
+    .sr-figure-label { letter-spacing: .28em; text-indent: .28em; }
+    .sr-figure-hint { font-size: 9px; letter-spacing: .12em; text-indent: .12em; }
+  }
+
+  /* The curtain: two velvet panels that gather toward the sides as --open
+     rises. Scaling the panel in X from its outer edge is what makes the folds
+     bunch up, the way a drawn curtain does. */
+  .sr-curtain {
+    position: absolute; top: 0; bottom: 0; width: 53%; z-index: 6;
+    pointer-events: none; will-change: transform;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,.6) 0, rgba(0,0,0,0) 14%, rgba(0,0,0,0) 74%, rgba(0,0,0,.55) 100%),
+      repeating-linear-gradient(90deg,
+        rgba(0,0,0,.46) 0, rgba(0,0,0,.08) 2.4%, rgba(255,140,140,.16) 4.4%, rgba(0,0,0,.08) 6.4%, rgba(0,0,0,.46) 8.6%),
+      repeating-linear-gradient(90deg,
+        rgba(0,0,0,.2) 0, rgba(0,0,0,0) 3.6%, rgba(255,255,255,.07) 5.6%, rgba(0,0,0,0) 7.8%, rgba(0,0,0,.22) 10.4%),
+      var(--curtain);
+  }
+  .sr-curtain-l {
+    left: 0; transform-origin: 0 50%;
+    transform: scaleX(calc(1 - var(--open, 0) * .88));
+    box-shadow: 22px 0 36px -8px rgba(0, 0, 0, .6);
+  }
+  .sr-curtain-r {
+    right: 0; transform-origin: 100% 50%;
+    transform: scaleX(calc(1 - var(--open, 0) * .88));
+    box-shadow: -22px 0 36px -8px rgba(0, 0, 0, .6);
+  }
+
+  /* The valance across the top stays put while the curtains open beneath it. */
+  .sr-valance {
+    position: absolute; left: 0; right: 0; top: 0; height: 58px; z-index: 8;
+    pointer-events: none;
+    background: linear-gradient(180deg, #46091a 0%, var(--curtain) 62%, #55101c 100%);
+    -webkit-mask:
+      radial-gradient(circle 26px at 26px 0, #000 97%, transparent 100%) 0 100% / 52px 26px repeat-x,
+      linear-gradient(#000, #000) 0 0 / 100% 32px no-repeat;
+    mask:
+      radial-gradient(circle 26px at 26px 0, #000 97%, transparent 100%) 0 100% / 52px 26px repeat-x,
+      linear-gradient(#000, #000) 0 0 / 100% 32px no-repeat;
+  }
+  .sr-valance::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 27px; height: 1px;
+    background: rgba(212, 175, 55, .85);
+    box-shadow: 0 3px 0 rgba(212, 175, 55, .38);
+  }
+
+  /* "Scroll" cue, on the closed curtain only. */
+  .sr-cue {
+    position: absolute; left: 50%; bottom: 7%; z-index: 9;
+    transform: translateX(-50%); pointer-events: none; text-align: center;
+    font-size: 11px; letter-spacing: .32em; text-indent: .32em; text-transform: uppercase;
+    color: rgba(246, 230, 168, .92);
+    opacity: clamp(0, calc(1 - var(--open, 0) * 7), 1);
+  }
+  .sr-cue::after {
+    content: ""; display: block; width: 1px; height: 36px; margin: 10px auto 0;
+    background: linear-gradient(180deg, rgba(246, 230, 168, .9), rgba(246, 230, 168, 0));
+    transform-origin: 50% 0;
+    animation: sr-cue 1.9s var(--ease-luxe) infinite;
+  }
+
+  /* ---- the wardrobe ---- */
+  .wd-bar {
+    position: absolute; top: 74px; left: 0; right: 0; z-index: 12;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 0 clamp(14px, 4vw, 56px);
+    pointer-events: none;
+  }
+  .wd-bar > * { pointer-events: auto; }
+  .wd-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .6em;
+    min-height: 44px; min-width: 44px; padding: 0 16px;
+    font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+    color: #f4e6b6;
+    background: rgba(14, 10, 8, .62);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    border: 1px solid rgba(212, 175, 55, .45);
+    transition: background-color .3s var(--ease-out), color .3s var(--ease-out);
+  }
+  .wd-btn:hover { background: rgba(212, 175, 55, .2); }
+  .wd-toggle { display: inline-flex; }
+  .wd-toggle .wd-btn + .wd-btn { border-left: 0; }
+  .wd-toggle .wd-btn[aria-pressed="true"] { background: rgba(212, 175, 55, .26); color: #fff6d6; }
+
+  .wd {
+    position: absolute; inset: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+    padding: 128px clamp(8px, 2vw, 24px) 24px;
+    /* One column per garment, as wide as the cabinet allows — but never so wide
+       that the cabinet outgrows the stage (the 1.9 is a garment's height over
+       its width, the 443px everything in the cabinet that is not a garment). */
+    --wd-chrome: 443px;
+    --item-w: clamp(94px,
+      min(calc((min(80vw, 1120px) - 112px) / var(--count, 8)),
+          calc((var(--stage-h) - var(--wd-chrome)) / 1.9)),
+      150px);
+    animation: wd-in .55s var(--ease-out) both;
+  }
+  .wd--closing { animation: wd-out .5s .7s var(--ease-out) both; }
+
+  .wd-cab {
+    position: relative; width: min(1120px, 80vw);
+    padding: 38px 16px 16px;
+    border-radius: 8px 8px 3px 3px;
+    background: linear-gradient(180deg, #3d2a1c 0%, #2a1c13 100%);
+    box-shadow:
+      0 50px 90px -30px rgba(0, 0, 0, .85),
+      0 0 0 1px rgba(212, 175, 55, .3),
+      inset 0 1px 0 rgba(255, 255, 255, .09);
+  }
+  .wd-plaque {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    padding: 3px 16px;
+    font-size: 10px; letter-spacing: .4em; text-indent: .4em; text-transform: uppercase;
+    color: var(--color-gold-light);
+    border: 1px solid rgba(212, 175, 55, .5);
+    background: rgba(0, 0, 0, .3);
+  }
+
+  /* The opening the doors close over: a shelf above, the hanging space below. */
+  .wd-opening { position: relative; perspective: 2600px; }
+  .wd-inner {
+    position: relative; overflow: hidden; border-radius: 2px;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(255, 224, 168, .26), rgba(255, 224, 168, 0) 58%),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.2) 0 1px, rgba(0,0,0,0) 1px 72px),
+      linear-gradient(180deg, #54392a 0%, #2d1f16 100%);
+    box-shadow: inset 0 0 70px rgba(0, 0, 0, .7), inset 0 0 0 1px rgba(0, 0, 0, .55);
+  }
+  .wd-shelf {
+    height: 58px;
+    border-bottom: 7px solid #22150e;
+    background: linear-gradient(180deg, rgba(255, 232, 186, .1), rgba(0, 0, 0, 0));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .08);
+  }
+  @media (max-height: 760px) {
+    .wd { --wd-chrome: 290px; }
+    .wd-shelf, .wd-base { display: none; }
+  }
+  @media (max-width: 700px) {
+    .wd-cab { width: 92vw; }
+    .wd { --item-w: clamp(94px, calc((var(--stage-h) - var(--wd-chrome)) / 1.9), 112px); }
+  }
+
+  .wd-scroll {
+    position: relative; overflow-x: auto; overflow-y: hidden;
+    overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    padding: 22px 0 12px;
+    scroll-snap-type: x proximity;
+  }
+  .wd-scroll::-webkit-scrollbar { display: none; }
+  .wd-scroll[data-l="1"][data-r="0"] { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 36px); mask-image: linear-gradient(90deg, transparent 0, #000 36px); }
+  .wd-scroll[data-l="0"][data-r="1"] { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  .wd-scroll[data-l="1"][data-r="1"] { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 36px, #000 calc(100% - 36px), transparent); }
+
+  .wd-rail {
+    display: flex; align-items: stretch; justify-content: center;
+    width: max-content; min-width: 100%;
+    margin: 0; padding: 0; list-style: none;
+  }
+  .wd-bracket {
+    flex: none; width: 15px; height: 30px;
+    margin-top: calc(var(--item-w) * 7 / 124 - 15px);
+    border-radius: 3px;
+    background: linear-gradient(90deg, #6b5120, #e8cf80 45%, #6b5120);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
+  }
+  .wd-item {
+    flex: 0 0 var(--item-w); width: var(--item-w);
+    display: flex; flex-direction: column; align-items: center;
+    scroll-snap-align: center;
+    opacity: 0;
+    transition: opacity .6s var(--ease-out);
+  }
+  .wd--open .wd-item { opacity: 1; transition-delay: calc(.2s + var(--i, 0) * 70ms); }
+  .wd-swing { width: 100%; transform-origin: 50% 5px; }
+  .wd--open .wd-swing {
+    animation: wd-swing 2.3s cubic-bezier(.3, .6, .4, 1) both;
+    animation-delay: calc(.4s + var(--i, 0) * 70ms);
+  }
+  .wd-garment {
+    display: block; width: 100%; height: auto;
+    filter: drop-shadow(0 9px 7px rgba(0, 0, 0, .5));
+  }
+  .wd-cap {
+    margin-top: auto; padding-top: 12px;
+    font-size: 11px; letter-spacing: .2em; text-indent: .2em; text-transform: uppercase; text-align: center;
+    color: var(--color-gold-light);
+  }
+
+  .wd-arrow {
+    position: absolute; top: 50%; z-index: 3; transform: translateY(-50%);
+    width: 44px; height: 44px; display: grid; place-items: center;
+    font-size: 26px; line-height: 1; color: #f4e6b6;
+    background: rgba(14, 10, 8, .68); border: 1px solid rgba(212, 175, 55, .45); border-radius: 50%;
+  }
+  .wd-arrow:hover { background: rgba(212, 175, 55, .24); }
+  .wd-arrow-l { left: 8px; }
+  .wd-arrow-r { right: 8px; }
+
+  /* The doors. Each is two faces on one hinge, so it has a front and an inside.
+     They open a little past square so, seen from the front, they stand out from
+     the cabinet's sides instead of lying across the clothes. */
+  .wd-door {
+    position: absolute; top: 0; bottom: 0; width: 50%;
+    transform-style: preserve-3d;
+    transition: transform 1.15s cubic-bezier(.22, .8, .2, 1);
+    pointer-events: none;
+  }
+  .wd-door-l { left: 0; transform-origin: 0 50%; }
+  .wd-door-r { right: 0; transform-origin: 100% 50%; }
+  .wd--open .wd-door-l { transform: rotateY(-98deg); }
+  .wd--open .wd-door-r { transform: rotateY(98deg); }
+  .wd-face {
+    position: absolute; inset: 0;
+    -webkit-backface-visibility: hidden; backface-visibility: hidden;
+    border-radius: 2px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.05), rgba(0,0,0,.2)),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 2px, rgba(0,0,0,.05) 2px 6px),
+      linear-gradient(180deg, #3f2c1e, #2d1f15);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, .55),
+      inset 0 0 0 14px rgba(0, 0, 0, .14),
+      inset 0 0 0 15px rgba(212, 175, 55, .34);
+  }
+  .wd-face-back { transform: rotateY(180deg); background: linear-gradient(180deg, #2c1e14, #1e140d); }
+  .wd-handle {
+    position: absolute; top: 46%; width: 6px; height: 86px; border-radius: 3px;
+    background: linear-gradient(90deg, #8a6a1c, #f1dc8a 45%, #8a6a1c);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .55);
+  }
+  .wd-door-l .wd-handle { right: 16px; }
+  .wd-door-r .wd-handle { left: 16px; }
+
+  /* Two drawers under the doors: they stay shut, they are the plinth. */
+  .wd-base { display: grid; gap: 8px; margin-top: 10px; }
+  .wd-drawer {
+    position: relative; display: block; height: 40px; border-radius: 2px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 2px, rgba(0,0,0,.05) 2px 6px),
+      linear-gradient(180deg, #3b291c, #2b1d14);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, .55),
+      inset 0 0 0 7px rgba(0, 0, 0, .12),
+      inset 0 0 0 8px rgba(212, 175, 55, .3);
+  }
+  .wd-drawer::after {
+    content: ""; position: absolute; left: 50%; top: 50%;
+    width: 64px; height: 5px; transform: translate(-50%, -50%); border-radius: 3px;
+    background: linear-gradient(180deg, #f1dc8a, #8a6a1c);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .55);
+  }
+
 }
 
 @keyframes shine { to { background-position: -240% 0; } }
@@ -316,6 +695,23 @@
   100% { transform: scale(1); }
 }
 .bag-catch { animation: bag-catch 460ms var(--ease-out); }
+
+@keyframes sr-cue {
+  0%   { transform: scaleY(0); opacity: 0; }
+  35%  { opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+@keyframes wd-in  { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes wd-out { from { opacity: 1; } to { opacity: 0; } }
+/* A hanger set swinging when the doors open: it overshoots, then settles. */
+@keyframes wd-swing {
+  0%   { transform: rotate(0); }
+  16%  { transform: rotate(3.4deg); }
+  38%  { transform: rotate(-2.6deg); }
+  60%  { transform: rotate(1.5deg); }
+  80%  { transform: rotate(-.7deg); }
+  100% { transform: rotate(0); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .coin-spin .coin-inner,
@@ -330,4 +726,13 @@
 
   .reveal { opacity: 1; transform: none; transition: none; }
   .bag-catch { animation: none; }
+
+  /* The showroom: nothing swings, nothing slides. (Its layout for reduced
+     motion — no pinning, curtains already drawn — hangs off data-reduced in the
+     components layer, so the script and the stylesheet cannot disagree.) */
+  .wd, .wd--closing { animation: none; }
+  .wd-door { transition: none; }
+  .wd-item { transition: none; }
+  .wd--open .wd-swing { animation: none; }
+  .sr-lineup, .sr-title, .sr-figure, .sr-art svg { transition: none; }
 }
