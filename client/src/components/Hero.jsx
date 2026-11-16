@@ -7,8 +7,7 @@ import Coin from "./Coin";
    site not set in the typewriter.
 
    The coin here is the CSS one, and it is interactive: drag to turn it, tap to
-   flip it. It deliberately teaches the same gestures as the WebGL coin on the
-   launch stage above, so a visitor who learns one knows the other. */
+   flip it, or use the arrow keys. */
 export default function Hero() {
   return (
     <section className="relative flex flex-col items-center px-6 pt-16 pb-20 text-center md:pt-24 md:pb-28">
@@ -42,12 +41,12 @@ export default function Hero() {
       <button
         type="button"
         onClick={() =>
-          document.getElementById("spotlight")?.scrollIntoView({ behavior: "smooth", block: "start" })
+          document.getElementById("shop")?.scrollIntoView({ behavior: "smooth", block: "start" })
         }
         className="min-h-11 bg-gold px-9 text-[11px] tracking-[0.18em] text-ink uppercase
                    transition-colors duration-400 ease-(--ease-out) hover:bg-gold-dark hover:text-cream"
       >
-        See the launch
+        Shop the collection
       </button>
     </section>
   );

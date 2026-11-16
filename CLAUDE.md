@@ -185,15 +185,18 @@ status lookups (a customer refreshing a confirmation page is not a payment attem
 
 ## Launch mode is data, not code
 
-`isSellable` is a per-product boolean. The client derives launch mode as "exactly one
-sellable product" (`App.jsx`) — one product renders `<Spotlight>`, more than one
-renders `<ProductGrid>`. `priceCart` refuses to sell anything not flagged sellable.
+`isSellable` is a per-product boolean, and it is the whole of "launch mode" now.
+`priceCart` refuses to sell anything not flagged sellable, and the client shows an
+unflagged piece as "Coming soon" with its button disabled. The home page lists the
+WHOLE catalogue either way — the client no longer swaps in a single-product page when
+exactly one item is sellable (the old `<Spotlight>` / `launchMode` logic is gone; see
+"Removed on request" under *Structure, in scroll order*).
 
 Currently only **Butterfly Tote** (₹799, Dawn/Dusk) is sellable, out of 12 catalogue
-items. Opening the full catalogue is a database update, not a redeploy:
+items. Opening the full catalogue for purchase is a database update, not a redeploy:
 
-```js
-db.products.updateMany({}, { $set: { isSellable: true } })
+```sql
+update products set is_sellable = true;
 ```
 
 ## Data model
@@ -208,11 +211,12 @@ db.products.updateMany({}, { $set: { isSellable: true } })
 
 - No router, no state library, no data-fetching library. Overlay state is one
   `useState` panel string in `App.jsx`. Keep it that way unless the app grows.
-- `LaunchCanvas` / `coinScene.js` — a pinned three.js macro-lens coin intro driven by
-  GSAP ScrollTrigger. `three` and `gsap` are dynamically imported so they stay out of
-  the initial bundle, split into their own chunks in `vite.config.js`. It bails out
-  entirely on `prefers-reduced-motion`, and `createCoinScene` returns `null` with no
-  WebGL — nothing below it depends on it.
+- `lib/coinScene.js` is no longer a scene. It keeps `buildCoinRig` (the gold coin:
+  geometry, metal, artwork, studio environment, lights) and `faceBrightness`, which the
+  opening intro (`IntroCurtain` / `lib/introScene.js`) builds its coin from. `three` is
+  dynamically imported so it stays out of the initial bundle, split into its own chunk
+  in `vite.config.js`. The pinned launch stage that used GSAP ScrollTrigger was
+  removed, so `gsap` is no longer imported anywhere and can be uninstalled.
 - `coinScene.js` targets the modern three colour-space API (`outputColorSpace` /
   `SRGBColorSpace`). The r128-era `outputEncoding` / `sRGBEncoding` were removed in
   r152 and are silently undefined — the gold renders washed out if reintroduced.
@@ -292,6 +296,11 @@ in the repo.
 The intended design of the site. Where this conflicts with what is currently in
 the code, **this brief wins** — see "Spec vs. built" below for the open gaps.
 
+> **Some of this brief describes code that no longer exists.** The launch canvas, the
+> coin's branch hotspots, "launch mode shows one product / PREBOOK" and the header
+> dock the coin flew into were removed — see "Removed on request" under *Structure,
+> in scroll order*. Treat those parts as history, not as requirements to restore.
+
 ## Brand
 
 NORMALIZE is an Indian lifestyle label — bags, apparel, caps and accessories —
@@ -335,23 +344,23 @@ Shimmering every surface is what made an earlier version read as cheap.
 
 ## Structure, in scroll order
 
-1. **Launch canvas** — pinned full-viewport macro stage holding a WebGL 3D coin
-2. **Hero** — eyebrow, serif headline, one line of positioning, one gold button
-3. **Spotlight** — dark full-bleed stage that *is* the product page during launch
-4. **Footer**
+1. **Hero** — eyebrow, serif headline, one line of positioning, one gold button
+2. **The catalogue** — every product, with category and sort controls (`Catalogue`,
+   also what the PRODUCTS canvas shows)
+3. **Footer**
 
-The product grid exists but is hidden while launch mode is on.
+**Removed on request (Nov 2026).** Gone from the client: the launch canvas (the pinned
+WebGL coin stage and its three branches), the dark single-product Spotlight with its
+PREBOOK button, and the early-access page (the gate, its five video loops, the
+coin-toss question and the waitlist form). The home page now opens on the hero and
+lists the whole catalogue. All of it is in git history: the tag `launch-page-final` is
+the last commit that has every piece, so `git checkout launch-page-final -- <path>`
+brings any file back (for example `client/src/components/LaunchCanvas.jsx`).
 
-**Current state: item 1 is not mounted.** On request, `App.jsx` no longer renders
-`LaunchCanvas`, so the page opens straight on the hero, then the product. The
-component, `lib/coinScene.js` and `data/hotspots.js` are kept untouched — the
-intro (`lib/introScene.js`) builds its coin from `coinScene.js`'s `buildCoinRig`,
-so that file is live either way. To bring the stage back, render
-`<LaunchCanvas onNavigate={...} />` as the first child of `<main id="top">`
-(lazy-imported, inside `<Suspense>`), with `onNavigate` sending `cart` to the bag
-panel, the reading-page ids to `InfoPanel`, and anything else to `scrollIntoView`.
-Until then, the sections below that describe the launch stage, its branches and
-the header dock are a description of code that is present but not running.
+Deliberately left in place: the server's `POST /api/waitlist`, `models/Waitlist.js`
+and `sql/003_waitlist.sql` — nothing in the client calls them now, but the signups and
+the table are real data. The opening coin intro (`IntroCurtain` / `lib/introScene.js`)
+also stays.
 
 ## The coin
 

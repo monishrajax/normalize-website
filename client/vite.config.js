@@ -15,11 +15,10 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // three.js and gsap are heavy and change rarely — splitting them keeps
-        // the app chunk small and cacheable across deploys.
+        // three.js is heavy and changes rarely — splitting it keeps the app
+        // chunk small and cacheable across deploys.
         manualChunks: {
           three: ["three"],
-          gsap: ["gsap"],
           /* Named so the auth SDK is one cacheable chunk rather than being
              inlined into whichever component happened to pull it first. It is
              fetched on the first account interaction, not at page load. */

@@ -131,143 +131,11 @@
   .coin-interactive { cursor: grab; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
   .coin-interactive .coin-inner { animation: none; }
 
-  /* The gate's reveal moment: a real toss, not the ambient 7s drift above.
-     Four full turns in 1.5s with a heavy ease-out — nearly all the motion
-     spends itself in the first third, same shape as a spun coin actually
-     loses energy, so it reads as thrown hard and then settling rather than
-     just spinning quickly throughout. 1440deg lands back on a whole number
-     of turns so it rests showing a face, never caught edge-on; `both` holds
-     that landed frame instead of snapping back to 0. Needs to be declared
-     AFTER .coin-spin .coin-inner above — same specificity, so source order
-     is what lets this win when both classes are present together. */
-  /* 4.184s to match the real (extended) toss-and-payout recording this
-     plays alongside (COIN_TOSS_MS in EarlyAccessGate.jsx) — change one,
-     change the other, or the spin and the sound finish at different
-     moments. The timing function lives ON EACH KEYFRAME below now, not
-     here, because a single bezier over this whole span front-loads nearly
-     all the rotation into the first third and leaves the coin barely
-     creeping for the last three seconds — wrong once the recording has real,
-     audible rattle continuing most of the way through, not just at the
-     start. */
-  .coin-toss .coin-inner { animation: coin-toss-spin 4.184s 1 both; }
   .coin-interactive:active { cursor: grabbing; }
 
   .coin-sm { width: 50px; height: 50px; }
-  /* The WebGL canvas, once reparented, fills the chassis. */
-  #header-coin-slot canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   .coin-md { width: 56px; height: 56px; }
   .coin-lg { width: 168px; height: 168px; }
-  /* The gate's brand coin. Deliberately well under the 190px coin that is
-     tossed on "Let the coin decide" — at 168 the two read as the same coin. */
-  .coin-gate { width: 120px; height: 120px; }
-  /* The early-access gate's hero coin — the same passive, zero-JS CSS flip as
-     the header and footer, just larger. No new asset, no new animation. */
-  .coin-xl { width: 240px; height: 240px; }
-
-  /* ---------- THE STAGE ----------
-     The opening screen is not a coin on a background. It is six transparent
-     layers stacked into a lit stage, and the double blur in layers 5a/5b is
-     what makes the frame read as a macro PHOTOGRAPH rather than a web page —
-     real optical falloff, not a drawn vignette. Paint order is back to front. */
-  .stage {
-    position: relative;
-    /* 100vh on mobile Safari/Chrome counts the area the address bar can slide
-       over, not what is actually visible — the stage ends up taller than the
-       screen, which on a pinned section means real content sits behind the
-       browser chrome. 100dvh tracks the viewport that's truly on screen and
-       resizes with it; the 100vh line stays first as the fallback wherever
-       dvh isn't understood, so this degrades safely rather than breaking. */
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-    background: var(--color-cream);
-    --lens-r: 220px;
-    --lens-x: 50%;
-    --lens-y: 40%;
-    --lx: 52%;
-    --ly: 40%;
-  }
-
-  /* 1 — Crest echo: texture you feel before you notice it. */
-  .stage-echo {
-    position: absolute; inset: 0; z-index: 0;
-    background: center/cover no-repeat url("/assets/coin-front.webp");
-    opacity: 0.15;
-    pointer-events: none;
-  }
-
-  /* 2 — Crest lens: the SAME artwork at full strength, revealed only inside a
-     feathered circle that follows the pointer. Moving the cursor polishes a
-     bright window through the faint layer below. */
-  .stage-lens {
-    position: absolute; inset: 0; z-index: 1;
-    background: center/cover no-repeat url("/assets/coin-front.webp");
-    pointer-events: none;
-    -webkit-mask-image: radial-gradient(circle var(--lens-r) at var(--lens-x) var(--lens-y),
-                                        #000 52%, transparent 98%);
-    mask-image: radial-gradient(circle var(--lens-r) at var(--lens-x) var(--lens-y),
-                                #000 52%, transparent 98%);
-  }
-
-  /* 3 — the coin canvas mounts here, z-index 1..2 */
-  .stage-coin { position: absolute; inset: 0; z-index: 2; }
-
-  /* 4 — Macro light: as if you were moving the lamp, not the page. */
-  .stage-light {
-    position: absolute; inset: 0; z-index: 2;
-    pointer-events: none;
-    mix-blend-mode: screen;
-    background: radial-gradient(46vmin circle at var(--lx) var(--ly),
-                                rgba(255, 242, 204, 0.5), rgba(255, 242, 204, 0) 62%);
-  }
-
-  /* 5 — Depth of field. Two stacked backdrop blurs, each masked radially from
-     the coin's optical centre so the middle stays sharp and focus falls away
-     toward the frame. THIS is the layer that sells the macro lens. */
-  .stage-dof, .stage-dof2 {
-    position: absolute; inset: 0; z-index: 3;
-    pointer-events: none;
-  }
-  .stage-dof {
-    -webkit-backdrop-filter: blur(7px);
-    backdrop-filter: blur(7px);
-    -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent 30%,
-      rgba(0,0,0,.12) 42%, rgba(0,0,0,.38) 54%, rgba(0,0,0,.72) 66%, #000 80%);
-    mask-image: radial-gradient(circle at 50% 46%, transparent 30%,
-      rgba(0,0,0,.12) 42%, rgba(0,0,0,.38) 54%, rgba(0,0,0,.72) 66%, #000 80%);
-  }
-  .stage-dof2 {
-    -webkit-backdrop-filter: blur(13px);
-    backdrop-filter: blur(13px);
-    -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent 52%,
-      rgba(0,0,0,.30) 66%, rgba(0,0,0,.70) 80%, #000 94%);
-    mask-image: radial-gradient(circle at 50% 46%, transparent 52%,
-      rgba(0,0,0,.30) 66%, rgba(0,0,0,.70) 80%, #000 94%);
-  }
-
-  /* 6 — Grain. A large tile at low opacity so the repeat never reads as a
-     grid, and static, so it costs nothing per frame. */
-  .stage-grain {
-    position: absolute; inset: 0; z-index: 5;
-    pointer-events: none;
-    opacity: 0.035;
-    mix-blend-mode: overlay;
-    background-repeat: repeat;
-    background-size: 400px 400px;
-  }
-
-  /* The lens vignette, above all six. */
-  .stage::after {
-    content: "";
-    position: absolute; inset: 0; z-index: 6;
-    pointer-events: none;
-    background: radial-gradient(circle at 50% 46%, transparent 42%, rgba(21,18,16,.28) 78%, rgba(21,18,16,.52) 100%);
-  }
-
-  @media (max-width: 768px) {
-    .stage { --lens-r: 140px; }
-  }
-
   /* Escape the panel's reading measure so the grid runs edge to edge.
 
      Cancelling the panel's own padding, NOT calc(50% - 50vw): viewport units
@@ -281,103 +149,6 @@
   @media (min-width: 768px) {
     .full-bleed { margin-inline: -2rem; }   /* the panel's md:px-8 */
   }
-
-  /* ---------- Hotspots ---------- */
-  .hs { position: absolute; z-index: 9; width: 0; height: 0; }
-
-  /* The gold bead where the branch meets the coin. */
-  .hs-anchor {
-    position: absolute; left: -5.5px; top: -5.5px;
-    width: 11px; height: 11px; border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%, #f0cf5a 0%, var(--color-gold) 55%, #3a2a12 100%);
-    box-shadow: 0 0 0 3px rgba(21,18,16,.35), 0 0 14px 4px rgba(214,175,55,.45);
-  }
-
-  /* The branch box is sized from the same --blen/--bang/--reach the label's
-     transform reads, so the drawing and the word are placed from one set of
-     numbers. --reach (default 1) is how fitLabels shortens a branch whose
-     word would otherwise overhang the viewport. */
-  .hs-branch {
-    position: absolute; top: 0; left: 0;
-    width: calc(var(--blen) * var(--reach, 1));
-    height: calc(var(--blen) * var(--reach, 1) * 0.62);
-    transform: translateY(-50%) rotate(var(--bang));
-    transform-origin: left center;
-    pointer-events: none;
-    overflow: visible;
-  }
-
-  /* Branches draw themselves in; the dash length is measured per path. */
-  .hs-branch path {
-    stroke-dashoffset: var(--dash);
-    transition: stroke-dashoffset .95s cubic-bezier(.15,.9,.25,1);
-  }
-  .hs-grown .hs-branch path { stroke-dashoffset: 0; }
-
-  /* Label: Archivo Expanded with a STATIC metallic fill. An animated sweep made
-     individual glyphs read light and dark unevenly and the word looked
-     detached from the branch. */
-  .hs-node {
-    position: absolute;
-    /* The viewport clamp rides here, NOT on transform. transform is
-       transitioned for the entrance, so a clamp applied to it would be measured
-       mid-flight and would compute its own correction from a moving target —
-       the measurement and the animation have to be on different properties. */
-    margin-left: var(--clamp, 0px);
-    white-space: nowrap;
-    font-family: var(--font-brand);
-    font-stretch: 125%;
-    /* 800 is the top of the wght range index.html requests (400..800); the
-       word sat too light on the cream at 700. The drop-shadow is the other
-       half of that: a hairline of dark under the glyphs lifts gold off cream
-       without changing its colour. It has to be filter, not text-shadow —
-       the fill is a background clipped to the text, so a text-shadow paints
-       BEHIND the transparent glyphs and shows through them as mud. */
-    font-weight: 800;
-    font-size: 21px;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    filter: drop-shadow(0 1px 0 rgba(58, 42, 18, .45)) drop-shadow(0 0 1px rgba(58, 42, 18, .25));
-    /* Gold, top to bottom — the same metal as the branch it hangs off, and
-       every stop stays inside the gold hue. Two earlier versions put a pale
-       band through the word (grey, then cream) as a specular highlight; on
-       the cream ground both read as a silver stripe through the letters. The
-       brightest stop is now the yellowest, so the word can only read as gold.
-       It still runs mid-to-dark towards the bottom, which is what keeps it
-       legible on #f4ede0 — a flat bright gold sinks into the ground. */
-    background: linear-gradient(
-      180deg,
-      #8a6a1c 0%,
-      #c9a13a 24%,
-      #ecc74e 44%,
-      #d4ad3c 60%,
-      #a8822a 80%,
-      #6b5015 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    opacity: 0;
-    /* Placement. The first translate walks 0.985·blen along the bearing to the
-       tip (plus 2px of air so the twig's round cap does not sit on the glyph);
-       the second aligns the word so the tip lands on its END, on its mid-line
-       — --ax/--ay are set per branch by place(). The trailing 8px is the
-       entrance rise and is removed once grown. */
-    --tip: calc(var(--blen) * var(--reach, 1) * 0.985 + 2px);
-    transform:
-      translate(calc(var(--tip) * var(--cos)), calc(var(--tip) * var(--sin)))
-      translate(var(--ax, 0%), var(--ay, -50%))
-      translateY(8px);
-    transition: opacity .6s var(--ease-out) .5s, transform .6s var(--ease-out) .5s;
-  }
-  .hs-grown .hs-node {
-    opacity: 1;
-    transform:
-      translate(calc(var(--tip) * var(--cos)), calc(var(--tip) * var(--sin)))
-      translate(var(--ax, 0%), var(--ay, -50%));
-  }
-
-  @media (max-width: 768px) { .hs-node { font-size: 18px; } }
 
   /* ---------- Full-page canvas reveal ----------
      Rule 2: every secondary surface is a full-viewport canvas, never a drawer
@@ -510,23 +281,6 @@
   .field:focus { outline: none; border-bottom-color: var(--color-gold-dark); }
   textarea.field { resize: vertical; }
 
-  /* ---------- Branch labels ----------
-     The coin's branch labels are the wordmark's typeface, not the body face. */
-  .branch-label {
-    font-family: var(--font-brand);
-    font-stretch: 125%;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-  }
-
-  /* Branches grow out of the coin by drawing themselves. The dash length is
-     set per-path from the measured geometry in LaunchCanvas. */
-  .branch-path {
-    stroke-dashoffset: var(--dash);
-    transition: stroke-dashoffset 1400ms var(--ease-reveal);
-  }
-  .branch-grown .branch-path { stroke-dashoffset: 0; }
-
   /* ---------- Scroll reveal ----------
      Cards stagger up into view. */
   /* Cards stagger up into view. Kept shorter than it looks like it wants to
@@ -555,21 +309,6 @@
 
 @keyframes shine { to { background-position: -240% 0; } }
 @keyframes coin-rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-/* Three stages, matched to the real recording's own structure (checked
-   against its waveform, not guessed): the toss and initial bounce (0-0.9s,
-   21% of this 4.184s total) get a fast, eased-out burst of rotation; the
-   steady rattle in the middle (0.9-3.4s, the bulk of the clip) keeps turning
-   at a near-constant rate, because that stretch is genuinely still spinning,
-   not winding down; the final decay to stillness (3.4-4.184s, the recording's
-   own natural trail to silence) eases the last of the rotation to a stop.
-   2880deg = 8 full turns, landing on a face either way. */
-@keyframes coin-toss-spin {
-  0%   { transform: rotateY(0deg);       animation-timing-function: cubic-bezier(.18,.86,.4,1); }
-  21%  { transform: rotateY(1040deg);    animation-timing-function: linear; }
-  81%  { transform: rotateY(2680deg);    animation-timing-function: cubic-bezier(.3,.6,.35,1); }
-  100% { transform: rotateY(2880deg); }
-}
-
 /* The bag icon's acknowledgement once a flight lands. */
 @keyframes bag-catch {
   0%   { transform: scale(1); }
@@ -580,7 +319,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .coin-spin .coin-inner,
-  .coin-toss .coin-inner,
   .metallic-text { animation: none; }
 
   /* Canvases still arrive, they just stop being liquid about it. */
@@ -590,28 +328,6 @@
   .canvas-body    { transition: opacity 200ms linear; transform: none; }
   .canvas-closed .canvas-body { transform: none; }
 
-  .branch-path { transition: none; stroke-dashoffset: 0; }
-  /* Non-negotiable 8: reduced motion kills the glint, the growth and the toss.
-     The branches must still be VISIBLE — they are navigation, not decoration. */
-  .hs-branch path { transition: none; stroke-dashoffset: 0; }
-  .hs-node {
-    opacity: 1;
-    transform:
-      translate(calc(var(--tip) * var(--cos)), calc(var(--tip) * var(--sin)))
-      translate(var(--ax, 0%), var(--ay, -50%));
-    transition: none;
-  }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bag-catch { animation: none; }
-  .fade-in { animation: none; }
 }
-
-/* ---------- The early-access gate ----------
-   Scoped to this one page: a React `key` on the state wrapper remounts it
-   on every ask/toss/result/done change, which replays this animation from
-   scratch each time without any manual reflow-forcing. */
-@keyframes fadeUp {
-  from { opacity: .001; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
-}
-.fade-in { animation: fadeUp .45s ease both; }

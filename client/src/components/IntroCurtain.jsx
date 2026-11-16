@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from "react";
 /* The opening: a black curtain over the whole site while the coin drops in,
    spins and comes at the screen (lib/introScene.js), then lifts on the page.
 
-   The real page is mounted underneath from the first frame — the catalogue,
-   the gate's video and the launch canvas all load WHILE this plays, which is
-   the point of it being a loading sequence rather than a delay.
+   The real page is mounted underneath from the first frame — the catalogue and
+   its images load WHILE this plays, which is the point of it being a loading
+   sequence rather than a delay.
 
    It never holds the visitor hostage, and it is the first thing to give way
    when a device or connection is struggling:

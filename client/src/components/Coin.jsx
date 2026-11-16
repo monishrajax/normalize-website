@@ -4,9 +4,7 @@ import { useEffect, useRef } from "react";
 
    Passive (header, footer): a pure CSS keyframe rotation — no JS runs at all.
 
-   Interactive (hero, and the launch stage's no-WebGL fallback): the same
-   interaction model as the real coin in lib/coinScene.js, so the two never
-   teach different gestures —
+   Interactive (the hero) —
 
      · drag or swipe sideways to turn it, with momentum on release
      · tap to flip it to its other face

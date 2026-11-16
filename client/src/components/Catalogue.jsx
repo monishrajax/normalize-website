@@ -1,0 +1,95 @@
+import ProductGrid from "./ProductGrid";
+
+const CATEGORIES = [
+  { key: "all", label: "All" },
+  { key: "bags", label: "Bags" },
+  { key: "apparel", label: "Apparel" },
+  { key: "caps", label: "Caps" },
+  { key: "accessories", label: "Accessories" },
+];
+
+/* The arrow is its own glyph, not part of the label, so it can be set larger
+   than the wide-tracked uppercase it sits beside. At matching size a ↑ is
+   almost invisible against 11px letterspaced caps — it reads as a speck of
+   punctuation rather than the thing that tells you which way the prices run. */
+const SORTS = [
+  { value: "featured", label: "Featured" },
+  { value: "price-asc", label: "Price", arrow: "↑" },
+  { value: "price-desc", label: "Price", arrow: "↓" },
+  { value: "newest", label: "Newest" },
+];
+
+/* The shop itself: heading, category and sort controls, the piece count and
+   the grid. One component with two homes — the home page and the PRODUCTS
+   canvas — so the two can never drift apart.
+
+   Both control rows are buttons, not <select>s: a native select opens the OS
+   picker on mobile, which is the one piece of chrome on the site nobody can
+   style. */
+export default function Catalogue({
+  products, loading, error,
+  category, onCategoryChange, sort, onSortChange, onSelect,
+  gridClassName = "",
+}) {
+  /* Brown for the resting state, like the header's words — at muted grey the
+     filter bar sank into the cream. The active pill is ink plus the rule. */
+  const pill = (active) =>
+    `grid h-11 place-items-center px-3 text-[12px] tracking-[0.14em] uppercase transition-colors ` +
+    (active ? "text-ink" : "text-brown hover:text-ink");
+
+  return (
+    <>
+      <h2 className="mb-8 font-display text-4xl text-ink md:text-5xl">Everything we make.</h2>
+      <hr className="doc-rule" />
+
+      <div className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line pb-2">
+        <nav className="flex flex-wrap items-center gap-x-2">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => onCategoryChange(c.key)}
+              aria-pressed={category === c.key}
+              className={`relative ${pill(category === c.key)}`}
+            >
+              {c.label}
+              {category === c.key && (
+                <span className="absolute right-3 bottom-1.5 left-3 h-px bg-gold-dark" />
+              )}
+            </button>
+          ))}
+        </nav>
+
+        <div className="flex flex-wrap items-center gap-x-1">
+          <span className="mr-1 text-[11px] tracking-[0.14em] text-brown uppercase">Sort</span>
+          {SORTS.map((s) => (
+            <button
+              key={s.value}
+              onClick={() => onSortChange(s.value)}
+              aria-pressed={sort === s.value}
+              aria-label={s.arrow ? `Sort by price, ${s.value === "price-asc" ? "low to high" : "high to low"}` : `Sort by ${s.label}`}
+              className={`${pill(sort === s.value)} grid-flow-col gap-1`}
+            >
+              {s.label}
+              {s.arrow && (
+                <span aria-hidden="true" className="text-[17px] leading-none">{s.arrow}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="mb-8 text-[12px] tracking-[0.14em] text-brown uppercase">
+        {loading ? "Loading…" : `${products.length} ${products.length === 1 ? "piece" : "pieces"}`}
+      </p>
+
+      <div className={gridClassName}>
+        <ProductGrid
+          products={products}
+          loading={loading}
+          error={error}
+          onSelect={onSelect}
+        />
+      </div>
+    </>
+  );
+}
