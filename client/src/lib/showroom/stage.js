@@ -195,11 +195,13 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
     }
   }
 
-  function place(px, py, dt) {
+  /* The camera follows the pointer a little; choosing a figure walks it in toward that figure. */
+  function place(px, py, dt, fa = 0, ff = null) {
     rig.x = dt ? damp(rig.x, px * 0.32, 3, dt) : px * 0.32;
     rig.y = dt ? damp(rig.y, py * 0.10, 3, dt) : py * 0.10;
-    camera.position.set(rig.x, 1.34 + rig.y, view.distance);
-    camera.lookAt(rig.x * 0.25, 0.93, 0);
+    const fx = ff ? ff.x : 0;
+    camera.position.set(rig.x + fx * 0.85 * fa, 1.34 + rig.y - 0.12 * fa, view.distance - 2.7 * fa);
+    camera.lookAt(rig.x * 0.25 + fx * fa, 0.93 + 0.28 * fa, 0);
     camera.updateMatrixWorld(true);
   }
 
@@ -207,12 +209,14 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
        progress  { open, lights }      from the scroll
        pointer   { x, y, inside }      -1..1 over the canvas
        hover     'men' | 'women' | null                                         */
-  function update(dt, time, { open, lights, pointer, hover, reduced }) {
+  function update(dt, time, { open, lights, pointer, hover, reduced, focus }) {
     const gust = reduced ? 0 : clamp(pointer.speed ?? 0, 0, 1);
     left.update(open, dt, time, gust);
     right.update(open, dt, time, gust);
 
-    place(reduced ? 0 : pointer.x, reduced ? 0 : pointer.y, dt);
+    const ff = focus ? figures.find((f) => f.id === focus.id) : null;
+    const fa = focus ? focus.amount : 0;
+    place(reduced ? 0 : pointer.x, reduced ? 0 : pointer.y, dt, fa, ff);
 
     veilMat.opacity = clamp(1 - lights * 1.6, 0, 1);
     gold.envMapIntensity = 0.25 + 1.2 * lights;
@@ -220,9 +224,9 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
     fill.intensity = 0.06 + 0.1 * lights;
 
     figures.forEach((f, i) => {
-      const hovered = hover === f.id;
-      const dim = hover && !hovered ? 0.7 : 1;
-      const target = lights * (hovered ? 135 : 100) * dim;
+      const hovered = hover === f.id || (focus && focus.id === f.id);
+      const dim = (hover && !hovered) || (focus && !hovered) ? 0.6 : 1;
+      const target = lights * (hovered ? 135 + 40 * fa : 100) * dim;
       spots[i].intensity = damp(spots[i].intensity, target, 6, dt);
 
       if (!f.group) return;
