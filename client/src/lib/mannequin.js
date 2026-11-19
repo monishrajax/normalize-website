@@ -74,9 +74,9 @@ export async function loadMannequin(url) {
    between a hand and the hip. */
 export function goldMaterial({ envMapIntensity = 1.35 } = {}) {
   const m = new THREE.MeshPhysicalMaterial({
-    color: 0xffd57a,
+    color: 0xffdc8a,
     metalness: 1,
-    roughness: 0.17,
+    roughness: 0.15,
     clearcoat: 0.35,
     clearcoatRoughness: 0.1,
     envMapIntensity,

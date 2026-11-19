@@ -19,9 +19,29 @@ const PLINTH_H = 0.05;
 const NEEDED_WIDTH = 3.1;          // metres at the figures that must be on screen
 const BASE_DISTANCE = 5.3;
 const CURTAIN_Z = 0.7;             // in front of the figures, behind the camera
+const EDGE_MARGIN = 0.18;          // where each panel is pinned, beyond the edge of the picture
+const OVERLAP = 0.16;              // how far each panel reaches past the middle when closed
 
 const damp = (a, b, lambda, dt) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+/* The floor is a dark glass over the mirrored figures. How much of the mirror shows is a
+   soft pool around the stage, falling away to solid black at a distance. */
+function floorFade() {
+  const W = 512;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = W;
+  const x = c.getContext("2d");
+  const g = x.createRadialGradient(W / 2, W / 2, 0, W / 2, W / 2, W / 2);
+  g.addColorStop(0.00, "#8c8c8c");     // alpha ~0.55: the mirror shows through
+  g.addColorStop(0.18, "#9a9a9a");
+  g.addColorStop(0.40, "#d0d0d0");
+  g.addColorStop(0.70, "#f4f4f4");
+  g.addColorStop(1.00, "#ffffff");
+  x.fillStyle = g; x.fillRect(0, 0, W, W);
+  const t = new THREE.CanvasTexture(c);
+  return t;
+}
 
 function backdropTexture() {
   const W = 512, H = 512;
@@ -56,18 +76,27 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
   wall.position.set(0, 8, -3.2);
   scene.add(wall);
 
+  const fade = floorFade();
   const floorMat = new THREE.MeshStandardMaterial({
     color: 0x0b0908,
-    roughness: 0.3,
+    roughness: 0.28,
     metalness: 0.15,
     transparent: true,
-    opacity: 0.84,
+    alphaMap: fade,
+    opacity: 1,
     depthWrite: false,
   });
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(40, 64), floorMat);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 64), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.renderOrder = 5;
   scene.add(floor);
+  // before the reveal the stage is dark and the mirror must not give the figures away under the hem
+  const veilMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 1, depthWrite: false });
+  const veil = new THREE.Mesh(new THREE.CircleGeometry(14, 32), veilMat);
+  veil.rotation.x = -Math.PI / 2;
+  veil.position.y = 0.002;
+  veil.renderOrder = 6;
+  scene.add(veil);
 
   /* ---- lights ---- */
   const spots = FIGURES.map((f) => {
@@ -78,7 +107,7 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
     return s;
   });
   // the house light that the curtain is lit by while the stage is dark
-  const house = new THREE.SpotLight(0xfff1e4, 150, 30, 0.95, 1.0, 1.4);
+  const house = new THREE.SpotLight(0xffeedd, 80, 30, 0.95, 1.0, 1.4);
   house.position.set(0, 7.6, 3.4);
   house.target.position.set(0, 0.4, CURTAIN_Z);
   scene.add(house, house.target);
@@ -142,15 +171,16 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
 
     const halfW = tan * (view.distance - CURTAIN_Z) * view.aspect;
     view.halfW = halfW;
+    // each panel is pinned a little beyond the edge of the picture and, closed, reaches past the middle
     const common = {
-      closedSpan: halfW + 0.14,
+      closedSpan: halfW + EDGE_MARGIN + OVERLAP,
       openSpan: clamp(halfW * 0.24, 0.55, 1.5),
       height: 6,
       z0: CURTAIN_Z,
       hem: 0.02,
     };
-    left.configure({ left: -halfW - 0.18, ...common });
-    right.configure({ left: halfW + 0.18, ...common });
+    left.configure({ left: -halfW - EDGE_MARGIN, ...common });
+    right.configure({ left: halfW + EDGE_MARGIN, ...common });
 
     place(0, 0, 0);
     // where each figure sits on screen, for the buttons laid over the canvas
@@ -169,7 +199,7 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
     rig.x = dt ? damp(rig.x, px * 0.32, 3, dt) : px * 0.32;
     rig.y = dt ? damp(rig.y, py * 0.10, 3, dt) : py * 0.10;
     camera.position.set(rig.x, 1.34 + rig.y, view.distance);
-    camera.lookAt(rig.x * 0.25, 0.98, 0);
+    camera.lookAt(rig.x * 0.25, 0.93, 0);
     camera.updateMatrixWorld(true);
   }
 
@@ -184,8 +214,9 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
 
     place(reduced ? 0 : pointer.x, reduced ? 0 : pointer.y, dt);
 
+    veilMat.opacity = clamp(1 - lights * 1.6, 0, 1);
     gold.envMapIntensity = 0.25 + 1.2 * lights;
-    house.intensity = 150 * (1 - 0.45 * lights);
+    house.intensity = 80 * (1 - 0.4 * lights);
     fill.intensity = 0.06 + 0.1 * lights;
 
     figures.forEach((f, i) => {
@@ -204,9 +235,9 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
 
   function dispose() {
     left.dispose(); right.dispose();
-    wallTexture.dispose();
+    wallTexture.dispose(); fade.dispose();
     plinthGeo.dispose(); ringGeo.dispose();
-    gold.dispose(); plinthMat.dispose(); ringMat.dispose(); floorMat.dispose();
+    gold.dispose(); plinthMat.dispose(); ringMat.dispose(); floorMat.dispose(); veilMat.dispose();
   }
 
   return {
