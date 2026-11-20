@@ -184,7 +184,6 @@ export async function createShowroom(canvas, { assetBase, garmentBase, loadItem,
       input.pointer.x = v.x; input.pointer.y = v.y; input.pointer.inside = true;
     },
     get mode() { return flow.mode; },
-    debug: () => ({ input, flow, wd, size, stageView: stage.view, step }),   // DEBUG-ONLY
     get mannequinsReady() { return stage.ready; },
     dispose() {
       setRunning(false);

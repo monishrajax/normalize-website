@@ -454,7 +454,7 @@ export function createWardrobe({ envTexture }) {
     }
     if (!hasP) {
       // nobody is pointing: let the light wander along the rod, slowly, so the room is never dead
-      hit.set(view.panX + Math.sin(time * 0.35) * Math.min(1.4, view.visW * 0.32), 1.45 + Math.sin(time * 0.5) * 0.12, 0);
+      hit.set(view.panX + (reduced ? 0 : Math.sin(time * 0.35) * Math.min(1.4, view.visW * 0.32)), 1.45 + (reduced ? 0 : Math.sin(time * 0.5) * 0.12), 0);
     }
     const vx = (hit.x - stub.lastP.x) / Math.max(dt, 1e-3);
     stub.lastP.copy(hit);
@@ -482,7 +482,7 @@ export function createWardrobe({ envTexture }) {
       const zeta = 0.085;
       let acc = -w0 * w0 * (g.phi - (reduced ? 0 : lean)) - 2 * zeta * w0 * g.phiV;
       acc += breeze * (0.55 * Math.sin(time * 0.83 + g.seed) + 0.35 * Math.sin(time * 1.9 + g.seed * 2.1));
-      acc += breeze * vxS * 2.4 * prox;                    // a sweep of the mouse sets it swinging
+      acc += breeze * vxS * 1.7 * prox;                    // a sweep of the mouse sets it swinging
       // the doors opening move the air
       if (prevDoors < 0.4 && open >= 0.4 && !reduced) g.phiV += (g.i % 2 ? 1 : -1) * (0.5 + 0.12 * ((g.i * 7) % 5));
       g.phiV += acc * dt;
