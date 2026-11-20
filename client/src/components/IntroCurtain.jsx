@@ -108,6 +108,7 @@ export default function IntroCurtain() {
   return (
     <div
       ref={hostRef}
+      data-intro=""
       aria-hidden="true"
       style={{
         position: "fixed", inset: 0, zIndex: 10000, background: "#000",

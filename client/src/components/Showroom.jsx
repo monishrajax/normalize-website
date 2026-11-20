@@ -111,6 +111,8 @@ export default function Showroom({ loadItem } = {}) {
         measure();
         applyScroll();
         run();
+        // two frames on, the canvas has drawn; until then CSS shows a closed curtain's colour
+        requestAnimationFrame(() => requestAnimationFrame(() => { if (!disposed) section.dataset.ready = "1"; }));
       } catch (err) {
         // no WebGL (or it was refused): the showroom is a flourish, so the page simply goes on without it
         console.warn("[normalize] showroom unavailable:", err);
@@ -122,10 +124,18 @@ export default function Showroom({ loadItem } = {}) {
     const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; applyScroll(); }); };
     applyScroll();
 
+    // The opening coin intro has its own WebGL scene on screen; do not start a second one under
+    // it. The intro marks itself with [data-intro] and removes itself when it lifts.
+    let waiter = 0;
+    const startWhenClear = () => {
+      if (started || disposed) return;
+      if (document.querySelector("[data-intro]")) { waiter = window.setTimeout(startWhenClear, 350); return; }
+      start();
+    };
     const io = new IntersectionObserver(
       ([entry]) => {
         visible = entry.isIntersecting;
-        if (visible) start();
+        if (visible && !started && !waiter) startWhenClear();
         run();
       },
       { rootMargin: "800px 0px" }
@@ -144,6 +154,7 @@ export default function Showroom({ loadItem } = {}) {
 
     return () => {
       disposed = true;
+      clearTimeout(waiter);
       cancelAnimationFrame(raf);
       io.disconnect(); ro.disconnect();
       window.removeEventListener("scroll", schedule);

@@ -532,7 +532,7 @@ export function createWardrobe({ envTexture }) {
     lamp.target.position.set(target.x, target.y, 0.02);
     const dist = lamp.position.distanceTo(lamp.target.position);
     lamp.angle = Math.atan(stub.spotR / dist);
-    lamp.intensity = damp(lamp.intensity, 150 * open * open * strength, 6, dt);
+    lamp.intensity = damp(lamp.intensity, 98 * open * open * strength, 6, dt);
 
     doorKey.intensity = 90 * (1 - 0.88 * clamp(open * 1.2, 0, 1));
     hemi.intensity = 0.4 + 0.75 * open;

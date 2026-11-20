@@ -1,5 +1,6 @@
 // Sculpts a gold display mannequin and writes a compact mesh.
-//   node sculpt.mjs <man|woman> <grid spacing in metres> <out.bin>
+//   node client/scripts/sculpt-mannequin.mjs <man|woman> <grid spacing in metres> <out.bin>
+//   (the shipped figures: 0.010, into client/public/assets/showroom/man.bin and woman.bin)
 //
 // The body is a signed-distance field built from a lofted torso and limbs swept
 // along splines, with muscle masses blended in, then meshed with surface nets and

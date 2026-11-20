@@ -345,8 +345,8 @@ Shimmering every surface is what made an earlier version read as cheap.
 ## Structure, in scroll order
 
 1. **Hero** — eyebrow, serif headline, one line of positioning, one gold button
-2. **The showroom** — a red curtain that opens as you scroll, a man and a woman
-   standing behind it, and a wardrobe for each (`Showroom`; see below)
+2. **The showroom** — a red velvet curtain that opens as you scroll, two gold
+   mannequins behind it, and a wardrobe of real clothes for each (`Showroom`; see below)
 3. **The catalogue** — every product, with category and sort controls (`Catalogue`,
    also what the PRODUCTS canvas shows)
 4. **Footer**
@@ -366,56 +366,113 @@ also stays.
 
 ## The showroom
 
-Added Nov 2026, between the hero and the catalogue. Scroll and a red velvet curtain
-draws back to show a man and a woman standing on a lit stage; click one and a wardrobe
-opens (two swinging doors) with that person's clothes hung along one brass rod, each
-named underneath. Men: shirt, t-shirt, shorts, pants, sweater, sleeveless, socks.
-Women: skirt, dress, blouse, t-shirt, shorts, trousers, cardigan, sleeveless, socks.
+Rebuilt Nov 2026. The first version was SVG drawings and CSS gradients; the founder
+called it "very animated, AI generated" and asked for the real thing: real flowing
+curtains, gold mannequins, photographs of clothes, and a spotlight that follows the
+cursor. Do not drift back toward illustration: **nothing in the showroom is a drawing.**
+
+Between the hero and the catalogue. Scroll and a red velvet curtain draws back from two
+gold mannequins on a lit stage with a polished floor. Click one: the camera walks in, a
+walnut wardrobe's doors swing open, and photographs of real clothes hang from a brass
+rod. One spotlight follows the cursor and settles on the garment under it; the clothes
+swing from their hooks as the cursor passes, with a caption naming whatever is lit.
+
+All of it is **one WebGL canvas** drawn by `lib/showroom/`, imported lazily just before
+the section scrolls into view (so none of three.js is paid for by a visitor who never
+gets this far; it adds one ~30 kB chunk on top of the three.js chunk the intro already
+loads). The page's half is `components/Showroom.jsx`.
 
 | Piece | Where |
 |---|---|
-| The section, scroll maths, open/close and focus handling | `components/Showroom.jsx` |
-| The cabinet, doors, rod and the sliding rail | `components/Wardrobe.jsx` |
-| The sixteen garment drawings (inline SVG) | `components/Garments.jsx` |
-| The two standing figures (inline SVG) | `components/Figures.jsx` |
+| Section, scroll maths, header measuring, pointer, keyboard, focus; the transparent buttons over the figures, Back, the caption | `components/Showroom.jsx`, `.sw-*` in `styles/index.css` |
+| The renderer, the one loop, the two scenes and the transitions between them | `lib/showroom/index.js` |
+| The curtain (cloth model, hang, velvet) | `lib/showroom/curtain.js` |
+| The stage: plinths, floor and its mirror, wall, spotlights, camera | `lib/showroom/stage.js` |
+| What the gold reflects (a painted room, PMREM-filtered) | `lib/showroom/studioEnv.js` |
+| The mannequins: loader and gold material | `lib/mannequin.js`, meshes in `public/assets/showroom/man.bin`, `woman.bin` |
+| The wardrobe: cabinet, doors, rod, hangers, sway, the lamp | `lib/showroom/wardrobe.js` |
+| Loading the clothes | `lib/showroom/garments.js`, `public/assets/showroom/garments/manifest.json` |
 | Which garments hang in which wardrobe, and their captions | `data/wardrobes.js` |
-| All of the visuals (curtain, stage, cabinet, doors) | `.sr-*` and `.wd-*` in `styles/index.css` |
+| How the mannequins and the cut-outs were made | `scripts/sculpt-mannequin.mjs`, `scripts/garments/` |
 
 How it works, and what is easy to break:
 
-1. **No scroll library.** The section is tall and the stage inside it is `position:
-   sticky`, so the page holds still on the stage while scrolling. The scroll position
-   is turned into two numbers, `--open` (curtain) and `--lights`, written onto the
-   section element; the CSS derives every transform from them. One scroll frame is
-   one style write, so nothing re-renders (React only hears when the curtain is open
-   far enough for the figures to take clicks). Measured: ~0.3ms per frame.
-2. **The stage pins under the sticky header**, so the header's height is measured
-   at run time and written to `--header-h`. Do not hardcode it.
-3. **The curtain gathers by scaling in X from its outer edge**, which is what makes
-   the folds bunch up. It is not a translate.
-4. **The garments are illustrations of kinds of clothing, not products.** They carry
-   no price, link nowhere, and several (t-shirt, shorts, socks) are not in the
-   catalogue. The same goes for the figures: they are faceless stand-ins drawn in SVG
-   because there is no model photography. Replace `<Man />` / `<Woman />` in
-   `Showroom.jsx` with `<img>` tags to use photos; nothing else depends on how they
-   are drawn. To make a garment open a real product, add its slug in
-   `data/wardrobes.js` and handle the click in `Wardrobe.jsx`.
-5. **Narrow screens scroll the rod sideways** (swipe, or the arrows) rather than
-   shrinking the clothes until they cannot be told apart; item width is derived from
-   the cabinet width and the stage height in `.wd`'s `--item-w`.
-6. **Reduced motion**: the section sets `data-reduced`, which unpins it and draws the
-   curtains already open; the doors, fades and swing are switched off in the
-   `prefers-reduced-motion` block. The structural rules deliberately hang off
-   `data-reduced`, not the media query, so the script and the stylesheet cannot
-   disagree.
-7. Opening focuses Back; Escape or Back closes it and returns focus to the figure that
-   opened it. The figures are `disabled` until the curtain is open, so they cannot be
-   clicked or tabbed to through the closed curtain.
+1. **Scroll is two numbers.** The section is tall and the stage inside it is `position:
+   sticky`; the scroll position becomes `open` (curtain) and `lights`, handed to the
+   scene with `setProgress`. React re-renders only when the curtain is open far enough
+   for the figures to take clicks. The stage pins under the sticky header, so the
+   header's height is measured at run time into `--header-h`. Do not hardcode it.
+2. **The loop runs only while it can be seen**: the section within 800px of the
+   viewport, and the tab visible. Off-screen it draws nothing.
+3. **The curtain is cloth, not a picture of it.** A row of fabric is a curve whose
+   direction at each point is an angle theta(s), s measured along the fabric; x and z
+   are the integrals of cos and sin. theta is a fixed, irregular wave scaled by one
+   number per row, solved (Newton's method) so the row spans exactly what the scroll
+   says. Close it and the pleats are wide and shallow; gather it and they stack tight
+   and deep, with no number chosen for either end. Folds are written in terms of the
+   *fabric*, so a fold is the same piece of cloth on every row; a more-open row simply
+   leans. `THETA_MAX` is 2.2 rad: this construction folds through itself at about 130
+   degrees, which is also about how tightly real cloth stacks. The solve runs on 11 key
+   rows and interpolates; the whole curtain costs ~2.5 ms/frame for both panels.
+4. **The hang is a spring chain.** Each row of the curtain is a mass on a chain hanging
+   from the rail; the top follows the scroll exactly and the rest follow through the
+   chain, so a quick scroll sends a wave down the cloth and the hem trails and settles.
+   The explicit integrator is only stable while `omega_max * h < 2`
+   (`omega_max = sqrt(4 * STIFF / lightest mass)`). `STIFF`, `DAMP` and `MAX_H` are
+   chosen together; raise `STIFF` without lowering `MAX_H` and a long frame sets the
+   rows alternating (it shows as serrated fold edges). Hitting that is what the
+   2-row checkerboard noise in the first attempt was.
+5. **The mannequins are sculpted, not modelled in a package.** `scripts/sculpt-mannequin.mjs`
+   builds each body as a signed-distance field (a lofted torso, limbs swept along
+   splines, muscle masses blended in), meshes it with surface nets, settles every vertex
+   exactly onto the surface and takes normals from the field's own gradient, so the
+   surface is smooth however coarse the mesh. A baked occlusion value per vertex darkens
+   the armpits and crotch. The file is `MNQ2` (quantised positions, 8-bit normals and
+   occlusion); `lib/mannequin.js` documents the layout. They are faceless, as display
+   mannequins are. Regenerate with `node client/scripts/sculpt-mannequin.mjs man 0.010
+   <out>`. The gold is a physical material under `studioEnv.js`'s painted room: dark
+   void, a few hard soft-edged softboxes, red velvet at either side. Polished metal is
+   its surroundings; without things to reflect it reads as brown plastic.
+6. **The floor is glass over upside-down copies of the figures.** The copies are the
+   reflection. A black "veil" over the floor hides them until the lights come up, because
+   otherwise the figures' legs show under the closed curtain's hem.
+7. **The clothes are photographs.** Cut out with `scripts/garments/cutout.py` (GrabCut
+   seeded by hand-drawn polygons), WebP with alpha, colour bled outward so the edge
+   carries no halo. `manifest.json` gives each kind its picture, size, hook point, real
+   height in metres and `hanger`: absent when the picture already shows its own hook,
+   `wire` (a hook over the rod), `clip` (jeans, shorts, skirt, socks) or `shoulder`
+   (the dress). The site draws those hangers itself. **A kind with no manifest entry
+   hangs nothing**; it never falls back to a drawing. Men's *sleeveless* has no
+   photograph yet, so it is not in `data/wardrobes.js`. Sources and licences are in
+   `scripts/garments/sources.json` (all Unsplash, free licence, none from the paid
+   `plus.unsplash.com` tier; check the host before adding any).
+8. **Every garment is a pendulum.** Its origin is its hook. The cursor leans it toward
+   the pointer, a fast sweep of the mouse sets it swinging, and the hem trails the
+   shoulders (a driven second oscillator), so the swing travels down the cloth. The
+   sway and the ripples are in the vertex shader (`DEFORM_FN`); position and normal share
+   one function so the light follows the bend. The shadow's depth material patches the
+   same function with the same uniforms, so shadows bend too.
+9. **One spotlight, and it is the cursor's.** It follows the pointer; over a garment it
+   settles on that garment, sized to it. Shadows are variance shadow maps (soft), at
+   0.62 intensity: a shadow in a lit room is never black. The garments cast; they do not
+   receive (self-shadow acne on flat cards).
+10. **Accessibility and touch.** Real `<button>`s lie over the figures (positioned from
+    the projected bounding boxes), `disabled` until the curtain is open. Opening focuses
+    Back; Escape or Back closes and returns focus to the figure. Arrow keys step the
+    light along the rod. On touch, drag pans the rod (`touch-action: pan-y` keeps
+    vertical scrolling), and a lifted finger leaves the light where it was before it goes
+    back to wandering. Narrow screens frame ~5 garments at once; the rod pans.
+11. **Reduced motion**: `data-reduced` unpins the section and draws the curtain already
+    open; there is no sway, no parallax, no wandering light, and the doors do not swing.
+    The structural CSS hangs off `data-reduced`, not the media query, so script and
+    stylesheet cannot disagree.
+12. **No WebGL, or the context is lost**: the component renders `null`; the page carries on
+    from the hero to the catalogue.
 
-Each Tailwind-scanned class used only in a new component is picked up by the
-production build; the dev server's scan can miss a brand-new utility until the CSS is
-next touched, which is why the stage heading is styled in `.sr-heading` rather than
-with arbitrary-colour utilities.
+Testing this in the Browser pane: the pane reports itself `hidden`, which pauses
+`requestAnimationFrame`, so scroll handlers and the loop never run. A timer-based rAF
+shim plus manual stepping of the scene, and snapshotting the canvas with `toDataURL`
+immediately after a render, is how it was verified; screenshots also lag one frame.
 
 ## The coin
 
