@@ -1,0 +1,164 @@
+{
+ "shirt": {
+  "file": "shirt.webp",
+  "w": 790,
+  "h": 1000,
+  "hook": {
+   "x": 0.4808,
+   "y": 0.0155
+  },
+  "height": 0.842
+ },
+ "tee": {
+  "file": "graytee.webp",
+  "w": 855,
+  "h": 1000,
+  "hook": {
+   "x": 0.5109,
+   "y": 0.0129
+  },
+  "height": 0.739
+ },
+ "shorts": {
+  "file": "shorts.webp",
+  "w": 740,
+  "h": 1000,
+  "hook": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "height": 0.54,
+  "hanger": "clip"
+ },
+ "pants": {
+  "file": "jeans.webp",
+  "w": 501,
+  "h": 1000,
+  "hook": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "height": 1.06,
+  "hanger": "clip"
+ },
+ "sweater": {
+  "file": "cardigan.webp",
+  "w": 878,
+  "h": 1000,
+  "hook": {
+   "x": 0.4653,
+   "y": 0.0
+  },
+  "height": 0.747,
+  "hanger": "wire"
+ },
+ "socks": {
+  "file": "socks.webp",
+  "w": 1467,
+  "h": 684,
+  "hook": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "height": 0.228,
+  "hanger": "clip"
+ },
+ "dress": {
+  "file": "dress.webp",
+  "w": 791,
+  "h": 1100,
+  "hook": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "height": 0.83,
+  "hanger": "shoulder"
+ },
+ "skirt": {
+  "file": "skirt.webp",
+  "w": 680,
+  "h": 900,
+  "hook": {
+   "x": 0.47,
+   "y": 0.0
+  },
+  "height": 0.719,
+  "hanger": "clip"
+ },
+ "blouse": {
+  "file": "blouse.webp",
+  "w": 902,
+  "h": 1000,
+  "hook": {
+   "x": 0.4942,
+   "y": 0.0131
+  },
+  "height": 0.762
+ },
+ "wtee": {
+  "file": "tee.webp",
+  "w": 677,
+  "h": 842,
+  "hook": {
+   "x": 0.484,
+   "y": 0.0
+  },
+  "height": 0.765,
+  "hanger": "wire"
+ },
+ "wshorts": {
+  "file": "shorts.webp",
+  "w": 740,
+  "h": 1000,
+  "hook": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "height": 0.54,
+  "hanger": "clip"
+ },
+ "trousers": {
+  "file": "jeans.webp",
+  "w": 501,
+  "h": 1000,
+  "hook": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "height": 1.06,
+  "hanger": "clip"
+ },
+ "cardigan": {
+  "file": "cardigan.webp",
+  "w": 878,
+  "h": 1000,
+  "hook": {
+   "x": 0.4653,
+   "y": 0.0
+  },
+  "height": 0.747,
+  "hanger": "wire"
+ },
+ "wtank": {
+  "file": "tank.webp",
+  "w": 756,
+  "h": 893,
+  "hook": {
+   "x": 0.5626,
+   "y": 0.0
+  },
+  "height": 0.49,
+  "hanger": "wire"
+ },
+ "wsocks": {
+  "file": "socks.webp",
+  "w": 1467,
+  "h": 684,
+  "hook": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "height": 0.228,
+  "hanger": "clip"
+ }
+}

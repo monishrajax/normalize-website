@@ -11,6 +11,10 @@ import * as THREE from "three";
                corner. This is the point the garment swings from.
        height  how tall the whole picture is in real life, in metres, so a dress is a
                dress and a pair of socks is a pair of socks.
+       hanger  what the photograph lacks and the site must add: "wire" a hook over the
+               rod, "clip" a clip hanger (trousers, shorts, skirts, socks), "shoulder"
+               a shoulder hanger (the dress). Absent when the picture already shows its
+               own hanger and hook.
 
    A kind with no entry hangs nothing. It never falls back to a drawing.              */
 let manifest;
@@ -24,6 +28,6 @@ export function loadGarment(item, base) {
     const e = all[item.kind];
     if (!e) throw new Error(`no photograph for ${item.kind}`);
     const map = await new THREE.TextureLoader().loadAsync(`${base}${e.file}`);
-    return { map, aspect: e.w / e.h, hook: e.hook, height: e.height };
+    return { map, aspect: e.w / e.h, hook: e.hook, height: e.height, hanger: e.hanger || null };
   });
 }

@@ -160,6 +160,64 @@ function spotCookie() {
   return t;
 }
 
+
+/* ---- the hangers the photographs do not have ----
+   All are drawn in the garment's own space: the origin is where the hook meets the rod, y runs
+   down, and the picture hangs from wherever the hanger ends. */
+const steel = new THREE.MeshStandardMaterial({ color: 0xa9abb0, metalness: 0.9, roughness: 0.34 });
+const hangerWood = new THREE.MeshStandardMaterial({ color: 0xb98d5e, roughness: 0.55, metalness: 0 });
+const hangerIvory = new THREE.MeshStandardMaterial({ color: 0xece5d8, roughness: 0.5, metalness: 0 });
+
+function hookWire(apexY) {
+  // from the hanger's neck, up, round three-quarters of the rod, and down the far side
+  const R = 0.0186;
+  const pts = [new THREE.Vector3(0, apexY, 0), new THREE.Vector3(0, apexY * 0.55 - R * 0.45, 0)];
+  for (let i = 0; i <= 22; i++) {
+    const a = ((270 - (305 * i) / 22) * Math.PI) / 180;
+    pts.push(new THREE.Vector3(R * Math.cos(a), R * Math.sin(a), 0));
+  }
+  const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 72, 0.0017, 6), steel);
+  m.castShadow = true;
+  return m;
+}
+
+function clipHanger(width) {
+  const g = new THREE.Group();
+  const bar = Math.min(0.5, Math.max(0.2, width * 0.84));
+  const barY = -0.092;
+  const b = new THREE.Mesh(new THREE.BoxGeometry(bar, 0.011, 0.012), hangerWood);
+  b.position.set(0, barY, 0);
+  b.castShadow = true;
+  g.add(b, hookWire(barY + 0.004));
+  // two clips at the ends, and one in the middle when the bar is wide enough to need it (three socks)
+  const at = bar > 0.4 ? [-0.34, 0, 0.34] : [-0.37, 0.37];
+  for (const px of at) {
+    for (const sz of [-1, 1]) {
+      const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.004), steel);
+      jaw.position.set(px * bar, barY - 0.03, sz * 0.0075);
+      g.add(jaw);
+    }
+  }
+  return g;
+}
+
+function shoulderHanger() {
+  const g = new THREE.Group();
+  const sh = new THREE.Shape();
+  const P = [[-0.215, -0.122], [-0.205, -0.133], [-0.19, -0.13], [-0.035, -0.086], [0.035, -0.086], [0.19, -0.13], [0.205, -0.133], [0.215, -0.122], [0.2, -0.112], [0.035, -0.072], [-0.035, -0.072], [-0.2, -0.112]];
+  sh.moveTo(P[0][0], P[0][1]);
+  for (let i = 1; i < P.length; i++) sh.lineTo(P[i][0], P[i][1]);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: true, bevelSize: 0.0025, bevelThickness: 0.0025, bevelSegments: 2 });
+  geo.translate(0, 0, -0.006 - 0.008);          // just behind the garment
+  const m = new THREE.Mesh(geo, hangerIvory);
+  m.castShadow = true;
+  g.add(m, hookWire(-0.076));
+  return g;
+}
+
+/* How far below the rod the top of the picture sits, for each kind of hanger. */
+const DROP = { wire: -0.078, clip: -0.108, shoulder: -0.126 };
+
 export function createWardrobe({ envTexture }) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x030202);
@@ -289,10 +347,11 @@ export function createWardrobe({ envTexture }) {
     items.forEach((it, i) => {
       const w = widths[i], h = it.height;
       const hook = it.hook || { x: 0.5, y: 0.02 };
+      const yOff = it.hanger ? DROP[it.hanger] : 0;
       const geo = new THREE.PlaneGeometry(w, h, 16, 28);
-      geo.translate(-(hook.x - 0.5) * w, -(0.5 - hook.y) * h, 0);
+      geo.translate(-(hook.x - 0.5) * w, -(0.5 - hook.y) * h + yOff, 0);
       const uniforms = sharedUniforms();
-      uniforms.uDrop.value = h * (1 - hook.y);
+      uniforms.uDrop.value = h * (1 - hook.y) - yOff;
       uniforms.uHalfW.value = w / 2;
       uniforms.uBulge.value = 0.018 + 0.012 * (i % 3) / 2;
 
@@ -319,15 +378,22 @@ export function createWardrobe({ envTexture }) {
       const x = -total / 2 + i * pitch;
       group.position.set(x, ROD_Y, (i % 2 ? 0.045 : -0.045) + (i % 3 === 0 ? 0.02 : 0));
       group.add(mesh);
+      // what the picture hangs from, if the picture does not show it
+      let hanger = null;
+      if (it.hanger === "wire") hanger = (() => { const g = new THREE.Group(); g.add(hookWire(yOff + 0.004)); return g; })();
+      else if (it.hanger === "clip") hanger = clipHanger(w);
+      else if (it.hanger === "shoulder") hanger = shoulderHanger();
+      if (hanger) group.add(hanger);
       clothes.add(group);
 
       garments.push({
-        i, label: it.label, group, mesh, mat, depth, uniforms, map,
-        x, w, h, drop: h * (1 - hook.y),
+        i, label: it.label, group, mesh, mat, depth, uniforms, map, hanger,
+        x, w, h, drop: h * (1 - hook.y) - yOff,
         phi: 0, phiV: 0, accTop: 0, hem: 0, hemV: 0, twist: 0, twistV: 0,
         hov: 0, seed: i * 1.913,
       });
     });
+    layout(view.w, view.h);          // the camera was fitted before there was anything on the rod
   }
 
   /* ---- layout: depends on the canvas shape ---- */
@@ -337,7 +403,7 @@ export function createWardrobe({ envTexture }) {
     const tan = Math.tan((FOV * Math.PI) / 360);
     const fitWide = Math.min(INNER_HALF * 2 + 0.3, view.contentW + 0.6);
     const wanted = view.aspect < 1.1 ? 2.3 : fitWide;
-    const needH = innerH + 0.35;
+    const needH = 1.62;                  // rod to hem, with air; the floor of the cabinet may fall out of frame
     view.dist = Math.max(wanted / (2 * tan * view.aspect), needH / (2 * tan));
     view.visW = 2 * tan * view.dist * view.aspect;
     view.maxPan = Math.max(0, view.contentW / 2 - view.visW / 2 + 0.05);
@@ -350,8 +416,8 @@ export function createWardrobe({ envTexture }) {
     rig.x = dt ? damp(rig.x, px * 0.18, 3, dt) : px * 0.18;
     rig.y = dt ? damp(rig.y, py * 0.06, 3, dt) : py * 0.06;
     view.panX = dt ? damp(view.panX, view.panGoal, 6, dt) : view.panGoal;
-    camera.position.set(view.panX + rig.x, 1.3 + rig.y, view.dist);
-    camera.lookAt(view.panX + rig.x * 0.4, 1.3, 0);
+    camera.position.set(view.panX + rig.x, 1.5 + rig.y, view.dist);
+    camera.lookAt(view.panX + rig.x * 0.4, 1.5, 0);
     camera.updateMatrixWorld(true);
   }
 
@@ -437,6 +503,7 @@ export function createWardrobe({ envTexture }) {
 
       const u = g.uniforms;
       u.uPhi.value = g.phi;
+      if (g.hanger) g.hanger.rotation.z = g.phi;
       u.uHem.value = g.hem;
       u.uTwist.value = g.twist;
       u.uTime.value = time;

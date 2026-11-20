@@ -165,7 +165,9 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
     view.w = w; view.h = h; view.aspect = w / h;
     camera.aspect = view.aspect;
     const tan = Math.tan((FOV * Math.PI) / 360);
-    view.distance = Math.max(BASE_DISTANCE, NEEDED_WIDTH / (2 * tan * view.aspect));
+    // a narrow screen needs more room around the figures: the gathered curtains take a fixed bite of each side
+    const needed = view.aspect < 0.9 ? NEEDED_WIDTH + 1.15 : NEEDED_WIDTH;
+    view.distance = Math.max(BASE_DISTANCE, needed / (2 * tan * view.aspect));
     camera.fov = FOV;
     camera.updateProjectionMatrix();
 
@@ -220,7 +222,7 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
 
     veilMat.opacity = clamp(1 - lights * 1.6, 0, 1);
     gold.envMapIntensity = 0.25 + 1.2 * lights;
-    house.intensity = 80 * (1 - 0.4 * lights);
+    house.intensity = 80 * (1 - 0.55 * lights) * (view.aspect < 0.9 ? 0.8 : 1);
     fill.intensity = 0.06 + 0.1 * lights;
 
     figures.forEach((f, i) => {
