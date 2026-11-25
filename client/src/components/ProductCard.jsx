@@ -47,7 +47,19 @@ export default function ProductCard({ product, onSelect, reveal = false }) {
             </div>
           )}
 
-          {!product.isSellable && (
+          {/* `paused` is the server saying "this is normally for sale, the till
+              is just closed for a moment" — not the same as a piece that has
+              not launched, so the two share neither a word nor a treatment.
+              An unreleased piece is veiled; a paused one is the product and
+              stays fully visible, with a small label at its foot. */}
+          {!product.isSellable && product.paused && (
+            <div className="absolute inset-x-0 bottom-0 flex justify-center pb-4">
+              <span className="border border-ink/30 bg-cream/90 px-4 py-2 text-[10px] tracking-[0.16em] text-ink uppercase">
+                Back shortly
+              </span>
+            </div>
+          )}
+          {!product.isSellable && !product.paused && (
             <div className="absolute inset-0 flex items-center justify-center bg-cream/70 backdrop-blur-[2px]">
               <span className="border border-ink/30 px-4 py-2 text-[10px] tracking-[0.16em] text-ink uppercase">
                 Coming soon
@@ -62,15 +74,20 @@ export default function ProductCard({ product, onSelect, reveal = false }) {
         </div>
       </button>
 
-      <button
-        onClick={() => toggleWishlist(product.id)}
-        aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
-        aria-pressed={saved}
-        className="absolute top-2 right-2 grid h-11 w-11 place-items-center
-                   transition-transform duration-300 ease-(--ease-out) hover:scale-110"
-      >
-        <StarIcon filled={saved} className={`h-[18px] w-[18px] ${saved ? "text-gold-dark" : "text-ink"}`} />
-      </button>
+      {/* Not offered on the window display (`product.window`): its ids are
+          stand-ins, and a star saved under one would be orphaned the moment the
+          real catalogue comes back. */}
+      {!product.window && (
+        <button
+          onClick={() => toggleWishlist(product.id)}
+          aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
+          aria-pressed={saved}
+          className="absolute top-2 right-2 grid h-11 w-11 place-items-center
+                     transition-transform duration-300 ease-(--ease-out) hover:scale-110"
+        >
+          <StarIcon filled={saved} className={`h-[18px] w-[18px] ${saved ? "text-gold-dark" : "text-ink"}`} />
+        </button>
+      )}
     </article>
   );
 }

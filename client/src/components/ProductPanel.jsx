@@ -85,16 +85,19 @@ export default function ProductPanel({ product, onClose }) {
               className="min-h-11 flex-1 bg-ink px-8 py-4 text-[11px] tracking-[0.18em] text-cream uppercase
                          transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {product.isSellable ? "Add to bag" : "Coming soon"}
+              {product.isSellable ? "Add to bag" : product.paused ? "Back shortly" : "Coming soon"}
             </button>
-            <button
-              onClick={() => toggleWishlist(product.id)}
-              aria-pressed={wished}
-              aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
-              className="grid min-h-11 w-12 place-items-center border border-line transition-colors hover:border-ink"
-            >
-              <StarIcon filled={wished} className={`h-4 w-4 ${wished ? "text-gold-dark" : "text-ink"}`} />
-            </button>
+            {/* Not on the window display — see ProductCard. */}
+            {!product.window && (
+              <button
+                onClick={() => toggleWishlist(product.id)}
+                aria-pressed={wished}
+                aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+                className="grid min-h-11 w-12 place-items-center border border-line transition-colors hover:border-ink"
+              >
+                <StarIcon filled={wished} className={`h-4 w-4 ${wished ? "text-gold-dark" : "text-ink"}`} />
+              </button>
+            )}
           </div>
 
           {/* Editorial accordions */}

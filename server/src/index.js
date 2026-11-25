@@ -11,16 +11,16 @@ import trackingRoutes from "./routes/tracking.js";
 import configRoutes from "./routes/config.js";
 import accountRoutes from "./routes/account.js";
 import waitlistRoutes from "./routes/waitlist.js";
+import { windowRoutes } from "./routes/window.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* ---------------------------------------------------------------------------
-   createApp — builds and returns the configured Express application.
-   Exported so the Vercel serverless adapter (api/index.js) can import it
-   without also opening a database pool or calling app.listen.
---------------------------------------------------------------------------- */
-export function createApp() {
+/* What every shape of the API shares: trusted proxy, CORS, body parsing and the
+   general rate limit. The real app and the window display (below) both start
+   from here, so a change to CORS or the limiter reaches both and the two cannot
+   drift into answering differently. */
+function baseApp() {
   const app = express();
 
   app.set("trust proxy", 1);   // correct client IPs behind a host's proxy
@@ -48,6 +48,17 @@ export function createApp() {
     legacyHeaders: false,
     message: { error: "Too many requests. Please slow down." },
   }));
+
+  return app;
+}
+
+/* ---------------------------------------------------------------------------
+   createApp — builds and returns the configured Express application.
+   Exported so the Vercel serverless adapter (api/index.js) can import it
+   without also opening a database pool or calling app.listen.
+--------------------------------------------------------------------------- */
+export function createApp() {
+  const app = baseApp();
 
   /* Payment endpoints get a tighter budget than browsing. Two things are
      deliberately exempt: Razorpay's webhook, which retries on any non-2xx and
@@ -99,20 +110,39 @@ export function createApp() {
   }
 
   app.use((req, res) => res.status(404).json({ error: "Not found." }));
+  app.use(lastResort);
 
-  /* Never leak a stack trace or a driver message to the browser. The cause goes
-     to the runtime log, where it belongs; the customer gets a sentence.
+  return app;
+}
 
-     A diagnostic that mirrored err.message into the response lived here briefly
-     while a production checkout failure was being traced. It is deliberately
-     gone: "Authentication failed" is a useful thing to whisper to an operator
-     and a careless thing to shout at the internet. If a 500 ever needs tracing
-     again, read the function logs — that line has always been there. */
-  app.use((err, req, res, next) => {
-    console.error("Unhandled error:", err);
-    res.status(err.status || 500).json({ error: "Something went wrong. Please try again." });
-  });
+/* Never leak a stack trace or a driver message to the browser. The cause goes
+   to the runtime log, where it belongs; the customer gets a sentence.
 
+   A diagnostic that mirrored err.message into the response lived here briefly
+   while a production checkout failure was being traced. It is deliberately
+   gone: "Authentication failed" is a useful thing to whisper to an operator
+   and a careless thing to shout at the internet. If a 500 ever needs tracing
+   again, read the function logs — that line has always been there. */
+function lastResort(err, req, res, next) {
+  console.error("Unhandled error:", err);
+  res.status(err.status || 500).json({ error: "Something went wrong. Please try again." });
+}
+
+/* ---------------------------------------------------------------------------
+   createWindowApp — what the API is while the database cannot be reached.
+   The serverless adapter swaps this in (and back out again once the database
+   answers); see routes/window.js for exactly what it does and does not do.
+   Same CORS, body parsing and rate limit as the real app, because both start
+   from baseApp(), and the same last-resort handler.
+
+   `why` is a function returning the latest reason the database was unreachable,
+   shown on /api/health for whoever is looking at why the shop is quiet.
+--------------------------------------------------------------------------- */
+export function createWindowApp({ why } = {}) {
+  const app = baseApp();
+  app.use("/api", windowRoutes({ why }));
+  app.use((req, res) => res.status(404).json({ error: "Not found." }));
+  app.use(lastResort);
   return app;
 }
 
