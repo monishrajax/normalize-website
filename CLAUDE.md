@@ -31,6 +31,10 @@ npm run dev             # server :5050 + client :5173 (Vite proxies /api)
 npm run dev:memory      # same, but against a throwaway Postgres
 npm test                # e2e — SEE CAVEAT BELOW
 npm run build           # vite build → client/dist
+
+npm run migrate --prefix server       # applies server/sql/*.sql to whatever DATABASE_URL points at
+npm run test:window --prefix server   # the window display — needs no database and no keys
+npm run test:adapter --prefix server  # the serverless adapter vs. a refused / healthy / returning database
 ```
 
 `.npmrc` at the root and in `client/` set `ignore-scripts=false` on purpose:
@@ -101,6 +105,81 @@ Five things here are deliberate and easy to undo by accident:
 Product ids are `uuid` — `pricing.js` validates the uuid shape
 before querying so a malformed id returns "Unknown item in cart" rather than a
 Postgres 22P02 cast error surfacing as a 500.
+
+## When the database is away — the window display
+
+**What happened (Nov 2026).** The Supabase project behind the shop was paused or
+removed (from outside the two look the same) and every request that needed Postgres
+failed. The serverless adapter used to refuse to start without the database, so
+*everything* answered 503: the storefront showed "0 pieces" and the Butterfly Tote
+vanished, though nothing about the product had changed — its record, photos and copy
+were intact and its images were still being served. Looking at the stock should not
+need the till to be open. The tell, from any terminal: `dig +short <ref>.supabase.co`
+prints nothing and `psql "$DATABASE_URL"` says `(ENOTFOUND) tenant/user postgres.<ref>
+not found`.
+
+**What happens now.** `api/index.js` checks the database once per cold start. If it
+answers, nothing is different. If it does not, the adapter serves `createWindowApp()`
+(`server/src/index.js`; routes in `server/src/routes/window.js`):
+
+- `GET /api/products[/:slug]` and `GET /api/config` work, from
+  `server/src/data/catalogue.json` — the very file `npm run seed` loads, so a product
+  is still defined in one place. Filtering, search and sorting are re-done in JS to
+  match `models/Product.js`; `toPublic()` is reused, so the allowlist is not copied.
+- **Nothing is sellable.** Every piece comes back `isSellable: false`, and one that is
+  normally on sale also carries `paused: true`. Ordering needs the database, and a
+  customer must never fill in an address and then be told it failed. The client reads
+  `paused` to show a clear photo with a small "Back shortly" label (and on the product
+  page a disabled "Back shortly" button), and keeps the veiled "Coming soon" for pieces
+  that have not launched. `/api/config` adds `ordering: "paused"`, which the announcement
+  bar turns into "Ordering is paused · Back shortly".
+- **Ids are slugs, and every piece carries `window: true`.** The real ids are uuids made
+  by Postgres and cannot be known here. A wishlist star saved under a slug would be
+  orphaned the moment the database returned (the header counts raw saved ids), so the
+  client hides the star on `window` pieces. `priceCart` rejects non-uuid ids outright,
+  so a slug can never reach a price. Cart lines are untouched: they are filtered out of
+  the bag while their products are "not sellable", and come back with the database.
+- Everything else under `/api` — orders, verify, the Razorpay webhook, tracking, accounts
+  — still answers 503, so Razorpay keeps retrying the webhook. `/api/health` answers 503
+  `{ degraded: true, detail }`, so anything watching it still sees the outage.
+- Responses are `Cache-Control: no-store` and carry `X-Normalize-Mode: window-display`,
+  which is the quickest way to tell which mode a live URL is in.
+
+**It heals itself.** A failed check is trusted for 30 s (`API_DB_RETRY_MS`), then the next
+request asks again; the first time the database answers, that instance switches to the full
+API for good. Restoring a paused project needs no redeploy. A failure to *load the code*
+(the modules will not import) is deliberately not handled this way — there is nothing to
+fall back on, so that stays the plain 503 with the cause in the log.
+
+Things to keep true:
+
+- The window reads the catalogue file **lazily, never at import.** `routes/window.js` is
+  imported by the real API, so a damaged file must only ever cost the window.
+- `vercel.json` lists `server/src/data/catalogue.json` under `includeFiles` for the
+  function. It is only read at run time, and a bundle that left it out would quietly turn
+  the window back into a 503.
+- `baseApp()` in `server/src/index.js` is the one start-up (proxy, CORS, body parsing,
+  general limiter) for both shapes, so they cannot drift.
+- It is a shop window and nothing more. No route in it may price, order or settle anything.
+
+Both test files need no Razorpay keys. `test:adapter` runs the adapter in child processes
+(its state lives in module variables, as on a cold start): database refused, `DATABASE_URL`
+unset, healthy, and — the case that matters — away and then back at the same address, which
+a TCP relay in the test stands in for.
+
+**Bringing the database back.**
+
+1. *Paused project* — a free Supabase project is paused after about a week without
+   activity, and can be restored with its data for a limited time afterwards (about 90 days
+   at the time of writing). Dashboard → the project → **Restore project**. The shop recovers
+   by itself within ~30 s. Check this first: the `orders` table (customer names, phones,
+   addresses, the sales record) lives there.
+2. *Project gone* — create a new one and take its **transaction pooler** string (port 6543),
+   put it in `server/.env`, run `npm run migrate --prefix server && npm run seed`, then set
+   `DATABASE_URL`, `SUPABASE_URL`, `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in
+   Vercel (and `SUPABASE_JWT_SECRET` only if the project signs with HS256) and redeploy —
+   the `VITE_*` values are baked into the client at build time. Orders and customer accounts
+   in the old project do not come across.
 
 ## Customer accounts (Supabase Auth)
 
@@ -187,7 +266,9 @@ status lookups (a customer refreshing a confirmation page is not a payment attem
 
 `isSellable` is a per-product boolean, and it is the whole of "launch mode" now.
 `priceCart` refuses to sell anything not flagged sellable, and the client shows an
-unflagged piece as "Coming soon" with its button disabled. The home page lists the
+unflagged piece as "Coming soon" with its button disabled (while the database is away a
+normally-sellable piece reads "Back shortly" instead — see *When the database is away*).
+The home page lists the
 WHOLE catalogue either way — the client no longer swaps in a single-product page when
 exactly one item is sellable (the old `<Spotlight>` / `launchMode` logic is gone; see
 "Removed on request" under *Structure, in scroll order*).
