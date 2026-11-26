@@ -426,7 +426,8 @@ Shimmering every surface is what made an earlier version read as cheap.
 ## Structure, in scroll order
 
 1. **Hero** — eyebrow, serif headline, one line of positioning, one gold button
-2. **The showroom** — a red velvet curtain that opens as you scroll, two gold
+2. **The showroom** — under the catalogue's own heading style, a framed stage in the
+   page container: a red velvet curtain that opens as you scroll, two gold
    mannequins behind it, and a wardrobe of real clothes for each (`Showroom`; see below)
 3. **The catalogue** — every product, with category and sort controls (`Catalogue`,
    also what the PRODUCTS canvas shows)
@@ -458,6 +459,17 @@ walnut wardrobe's doors swing open, and photographs of real clothes hang from a 
 rod. One spotlight follows the cursor and settles on the garment under it; the clothes
 swing from their hooks as the cursor passes, with a caption naming whatever is lit.
 
+**It is a window set into the cream page, not a takeover of it** (Nov 2026). The first
+build ran edge to edge on a black ground and met the hero with a hard line; the founder
+said it "looks odd and not matching with the website". Now the section opens with the
+catalogue's own heading chassis (eyebrow, `font-display` heading, `.doc-rule`, one
+typewriter line), and the stage sits in the same `max-w-(--container-site)` container, so
+its edges line up with the catalogue grid beneath it. It is the one dark thing on the page,
+with a 1px gold-dark hairline standing 7px off its edge (an `outline`, because the stage
+clips its own children). Keep it that way: do not give `.sw` a background or take the stage
+out of the container. The curtain is oxblood (`0x5a0814`, sheen `0x9c2a3a`), not the first
+bright crimson; a try that also lowered the saturation went muddy brown and lost the velvet.
+
 All of it is **one WebGL canvas** drawn by `lib/showroom/`, imported lazily just before
 the section scrolls into view (so none of three.js is paid for by a visitor who never
 gets this far; it adds one ~30 kB chunk on top of the three.js chunk the intro already
@@ -478,11 +490,17 @@ loads). The page's half is `components/Showroom.jsx`.
 
 How it works, and what is easy to break:
 
-1. **Scroll is two numbers.** The section is tall and the stage inside it is `position:
-   sticky`; the scroll position becomes `open` (curtain) and `lights`, handed to the
-   scene with `setProgress`. React re-renders only when the curtain is open far enough
-   for the figures to take clicks. The stage pins under the sticky header, so the
-   header's height is measured at run time into `--header-h`. Do not hardcode it.
+1. **Scroll is two numbers.** The `.sw-track` is tall (`--stage-h` + 170vh) and the stage
+   inside it is `position: sticky`; the scroll position becomes `open` (curtain) and
+   `lights`, handed to the scene with `setProgress`. React re-renders only when the curtain
+   is open far enough for the figures to take clicks. The heading sits ABOVE the track, so
+   progress is measured on the track alone, from the stage's computed `top` (read with
+   `getComputedStyle`, which resolves the `calc()` to px). The stage pins under the sticky
+   header, so the header's height is measured at run time into `--header-h`. Do not
+   hardcode it. `--stage-h` fills the room under the header but is capped at 4:5 (the
+   proportion of every product photo): the scene is framed by its WIDTH, so on a phone a
+   taller stage only adds black above and below the figures. A stage shorter than the room
+   is centred in it while pinned rather than hung from the top over a blank page.
 2. **The loop runs only while it can be seen**: the section within 800px of the
    viewport, and the tab visible. Off-screen it draws nothing.
 3. **The curtain is cloth, not a picture of it.** A row of fabric is a curve whose
@@ -543,7 +561,7 @@ How it works, and what is easy to break:
     light along the rod. On touch, drag pans the rod (`touch-action: pan-y` keeps
     vertical scrolling), and a lifted finger leaves the light where it was before it goes
     back to wandering. Narrow screens frame ~5 garments at once; the rod pans.
-11. **Reduced motion**: `data-reduced` unpins the section and draws the curtain already
+11. **Reduced motion**: `data-reduced` unpins the stage and draws the curtain already
     open; there is no sway, no parallax, no wandering light, and the doors do not swing.
     The structural CSS hangs off `data-reduced`, not the media query, so script and
     stylesheet cannot disagree.
@@ -553,7 +571,13 @@ How it works, and what is easy to break:
 Testing this in the Browser pane: the pane reports itself `hidden`, which pauses
 `requestAnimationFrame`, so scroll handlers and the loop never run. A timer-based rAF
 shim plus manual stepping of the scene, and snapshotting the canvas with `toDataURL`
-immediately after a render, is how it was verified; screenshots also lag one frame.
+immediately after a render, is how it was verified; screenshots also lag one frame. The
+pane can also run the WebGL scene at ~2 fps, so the curtain's spring chain takes tens of
+seconds to settle after a scroll jump; wait, then screenshot twice.
+
+When hiding the opening intro to see the page under it, set `[data-intro]` to
+`display: none`; never `.remove()` it. React removes that node itself a moment later, throws
+`removeChild`, and the whole tree unmounts to a blank cream page (a test artefact, not a bug).
 
 ## The coin
 
