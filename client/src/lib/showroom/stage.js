@@ -107,7 +107,7 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
     return s;
   });
   // the house light that the curtain is lit by while the stage is dark
-  const house = new THREE.SpotLight(0xffeedd, 80, 30, 0.95, 1.0, 1.4);
+  const house = new THREE.SpotLight(0xffeedd, 68, 30, 0.95, 1.0, 1.4);
   house.position.set(0, 7.6, 3.4);
   house.target.position.set(0, 0.4, CURTAIN_Z);
   scene.add(house, house.target);
@@ -222,7 +222,7 @@ export function createStage({ envTexture, assetBase = "/assets/showroom/" }) {
 
     veilMat.opacity = clamp(1 - lights * 1.6, 0, 1);
     gold.envMapIntensity = 0.25 + 1.2 * lights;
-    house.intensity = 80 * (1 - 0.55 * lights) * (view.aspect < 0.9 ? 0.8 : 1);
+    house.intensity = 68 * (1 - 0.55 * lights) * (view.aspect < 0.9 ? 0.8 : 1);
     fill.intensity = 0.06 + 0.1 * lights;
 
     figures.forEach((f, i) => {

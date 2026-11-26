@@ -308,29 +308,50 @@
 
   /* ---------- The showroom ----------
      One WebGL canvas (lib/showroom/ draws everything) and a few real controls laid over it.
-     See components/Showroom.jsx. The section is tall and the stage inside it is `sticky`,
-     so the page holds still on the stage while the scroll position draws the curtain. */
+     See components/Showroom.jsx. The `.sw-track` is tall and the stage inside it is `sticky`,
+     so the page holds still on the stage while the scroll position draws the curtain.
+
+     The stage is a window set INTO the cream page, not a takeover of it: it lives in the same
+     container as the catalogue, and when it pins there is `--sw-gap` of cream above (under the
+     header) and below it. It used to run edge to edge on a black ground, which met the hero
+     with a hard line and read as a different website. */
   .sw {
     position: relative;
-    --stage-h: calc(100vh - var(--header-h, 60px));
-    background: #030202;
+    --sw-pad: 1.5rem;                       /* the container's side padding (px-6) */
+    --sw-gap: 1rem;                         /* the least cream kept above and below the pinned stage */
+    --sw-room: calc(100vh - var(--header-h, 60px));
+    /* The stage's width, which is the container's less its padding. */
+    --sw-w: min(calc(100vw - 2 * var(--sw-pad)), calc(var(--container-site) - 2 * var(--sw-pad)));
+    /* It fills the room under the header, but never grows taller than 4:5, the proportion of
+       every photograph in the shop. The scene is framed by its WIDTH, so on a phone a taller
+       stage adds nothing but black above and below the figures. */
+    --stage-h: max(26rem, min(calc(var(--sw-room) - 2 * var(--sw-gap)), calc(var(--sw-w) * 1.25)));
   }
   @supports (height: 100dvh) {
-    .sw { --stage-h: calc(100dvh - var(--header-h, 60px)); }
+    .sw { --sw-room: calc(100dvh - var(--header-h, 60px)); }
+  }
+  @media (min-width: 768px) {
+    .sw { --sw-pad: 2rem; --sw-gap: 1.25rem; }
   }
   .sw-stage {
     position: sticky;
-    top: var(--header-h, 60px);
+    /* Pinned just under the header; if the stage is shorter than the room (a phone), it is
+       centred in what is left rather than hung from the top with a blank page under it. */
+    top: calc(var(--header-h, 60px) + max(var(--sw-gap), (var(--sw-room) - var(--stage-h)) / 2));
     height: var(--stage-h);
     overflow: hidden;
     isolation: isolate;
     background: #030202;
     touch-action: pan-y;
+    /* A gold hairline standing off the edge: gold as a line, never a fill (rule 3). It is an
+       outline because the stage clips its own children. */
+    outline: 1px solid color-mix(in srgb, var(--color-gold-dark) 60%, transparent);
+    outline-offset: 7px;
   }
   /* Until the canvas has drawn its first frame, show the colour of a closed curtain rather than black. */
   .sw:not([data-ready]) .sw-stage::before {
     content: ""; position: absolute; inset: 0; z-index: 0;
-    background: linear-gradient(180deg, #3a0710 0%, #280509 55%, #120204 100%);
+    background: linear-gradient(180deg, #5a131b 0%, #430e15 65%, #16060a 100%);
   }
   .sw[data-reduced] .sw-stage { position: relative; }
   .sw-canvas {

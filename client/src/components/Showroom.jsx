@@ -33,6 +33,7 @@ const prefersReducedMotion = () =>
 
 export default function Showroom({ loadItem } = {}) {
   const sectionRef = useRef(null);
+  const trackRef = useRef(null);
   const stageRef = useRef(null);
   const canvasRef = useRef(null);
   const captionRef = useRef(null);
@@ -56,9 +57,10 @@ export default function Showroom({ loadItem } = {}) {
   /* ---- the scene: created just before it is needed, run only while it can be seen ---- */
   useEffect(() => {
     const section = sectionRef.current;
+    const track = trackRef.current;
     const stage = stageRef.current;
     const canvas = canvasRef.current;
-    if (!section || !stage || !canvas) return undefined;
+    if (!section || !track || !stage || !canvas) return undefined;
 
     let disposed = false;
     let started = false;
@@ -74,9 +76,13 @@ export default function Showroom({ loadItem } = {}) {
       section.style.setProperty("--header-h", `${Math.round(headerH)}px`);
       let open = 1, lights = 1;
       if (!reduced) {
-        const travel = section.offsetHeight - stage.offsetHeight;       // read after the write above
-        const top = section.getBoundingClientRect().top;
-        const p = travel > 0 ? clamp01((headerH - top) / travel) : 1;
+        // The stage holds still a little below the header (the page's cream shows above and below
+        // it), and the heading sits above the track, so progress is measured on the track alone: it
+        // starts the moment the stage pins and ends when the track lets it go.
+        const stick = parseFloat(getComputedStyle(stage).top) || headerH;   // read after the write above
+        const travel = track.offsetHeight - stage.offsetHeight;
+        const top = track.getBoundingClientRect().top;
+        const p = travel > 0 ? clamp01((stick - top) / travel) : 1;
         open = smooth(segment(p, OPEN_FROM, OPEN_TO));
         lights = smooth(segment(p, LIGHTS_FROM, LIGHTS_TO));
       }
@@ -238,55 +244,77 @@ export default function Showroom({ loadItem } = {}) {
 
   const onStage = mode === "stage";
 
+  /* The section speaks in the page's own voice. The heading block is the catalogue's, set the
+     same way (eyebrow, display serif, the short gold rule), and the stage sits in the same
+     container, so its edges line up with the catalogue grid beneath it. The stage is the one
+     dark thing; everything round it is the cream page. */
   return (
     <section
       id="showroom"
       ref={sectionRef}
       className="sw"
       data-reduced={reduced ? "1" : undefined}
-      style={reduced ? undefined : { height: `calc(var(--stage-h) + ${EXTRA_SCROLL_VH}vh)` }}
-      aria-label="Showroom"
+      aria-labelledby="showroom-title"
     >
-      <div
-        ref={stageRef}
-        className="sw-stage"
-        onPointerMove={onPointerMove}
-        onPointerDown={onPointerDown}
-        onPointerUp={endPointer}
-        onPointerCancel={endPointer}
-        onPointerLeave={endPointer}
-      >
-        <canvas ref={canvasRef} className="sw-canvas" aria-hidden="true" />
+      <div className="mx-auto max-w-(--container-site) px-6 md:px-8">
+        <p className="mb-8 text-[11px] tracking-[0.2em] text-muted uppercase">The showroom</p>
+        <h2 id="showroom-title" className="mb-8 font-display text-4xl text-ink md:text-5xl">
+          Draw the curtain.
+        </h2>
+        <hr className="doc-rule" />
+        <p className="mb-12 max-w-md text-sm leading-relaxed text-muted md:mb-14">
+          Scroll to open it.
+          <br />
+          Choose a figure to step inside.
+        </p>
 
-        {onStage && rects.map(({ id, rect }) => rect && (
-          <button
-            key={id}
-            type="button"
-            ref={(el) => { hitRefs.current[id] = el; }}
-            className="sw-hit"
-            data-hover={hovered === id ? "1" : "0"}
-            disabled={!usable}
-            style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
-            onPointerEnter={() => hover(id)}
-            onPointerLeave={() => hover(null)}
-            onFocus={() => hover(id)}
-            onBlur={() => hover(null)}
-            onClick={() => openWardrobe(id)}
-            aria-label={`Open the ${WARDROBES[id].title.toLowerCase()}'s wardrobe`}
+        <div
+          ref={trackRef}
+          className="sw-track"
+          style={reduced ? undefined : { height: `calc(var(--stage-h) + ${EXTRA_SCROLL_VH}vh)` }}
+        >
+          <div
+            ref={stageRef}
+            className="sw-stage"
+            onPointerMove={onPointerMove}
+            onPointerDown={onPointerDown}
+            onPointerUp={endPointer}
+            onPointerCancel={endPointer}
+            onPointerLeave={endPointer}
           >
-            <span className="sw-label" aria-hidden="true">{WARDROBES[id].title}</span>
-          </button>
-        ))}
+            <canvas ref={canvasRef} className="sw-canvas" aria-hidden="true" />
 
-        <div ref={captionRef} className="sw-caption" role="status" data-show="0" />
+            {onStage && rects.map(({ id, rect }) => rect && (
+              <button
+                key={id}
+                type="button"
+                ref={(el) => { hitRefs.current[id] = el; }}
+                className="sw-hit"
+                data-hover={hovered === id ? "1" : "0"}
+                disabled={!usable}
+                style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
+                onPointerEnter={() => hover(id)}
+                onPointerLeave={() => hover(null)}
+                onFocus={() => hover(id)}
+                onBlur={() => hover(null)}
+                onClick={() => openWardrobe(id)}
+                aria-label={`Open the ${WARDROBES[id].title.toLowerCase()}'s wardrobe`}
+              >
+                <span className="sw-label" aria-hidden="true">{WARDROBES[id].title}</span>
+              </button>
+            ))}
 
-        {mode === "wardrobe" && (
-          <button ref={backRef} type="button" className="sw-back" onClick={closeWardrobe}>
-            <span aria-hidden="true">&larr;</span> Back
-          </button>
-        )}
+            <div ref={captionRef} className="sw-caption" role="status" data-show="0" />
 
-        <div className="sw-cue" aria-hidden="true">Scroll</div>
+            {mode === "wardrobe" && (
+              <button ref={backRef} type="button" className="sw-back" onClick={closeWardrobe}>
+                <span aria-hidden="true">&larr;</span> Back
+              </button>
+            )}
+
+            <div className="sw-cue" aria-hidden="true">Scroll</div>
+          </div>
+        </div>
       </div>
     </section>
   );

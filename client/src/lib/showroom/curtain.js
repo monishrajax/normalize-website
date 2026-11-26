@@ -143,12 +143,16 @@ export function createCurtain({ side = -1, folds = 7, fullness = 1.95, seed = 7 
   geometry.setIndex(new THREE.BufferAttribute(idx, 1));
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 1e3);   // it moves; never cull it
 
+  /* Oxblood, not stage red. The first colour (0x6a0610, sheen 0xb02a3c) was a bright theatre
+     crimson and was the loudest thing on a cream page that says "quiet luxury". This one is
+     darker, with the same saturation: the mid-tones stay a true red (a first try that also
+     lowered the saturation went to muddy brown and lost the velvet), it just no longer shouts. */
   const material = new THREE.MeshPhysicalMaterial({
-    color: 0x6a0610,
+    color: 0x5a0814,
     roughness: 0.92,
     metalness: 0,
     sheen: 1,
-    sheenColor: new THREE.Color(0xb02a3c),
+    sheenColor: new THREE.Color(0x9c2a3a),
     sheenRoughness: 0.5,
     vertexColors: true,
     side: THREE.DoubleSide,
